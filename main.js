@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { exec } = require('child_process');
 const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
