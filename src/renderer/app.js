@@ -1,0 +1,471 @@
+// Renderer App logic for MyAssist
+let tasks = [];
+let settings = {};
+let currentAlertTaskId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  initTabs();
+  initTimeWidget();
+  initEventListeners();
+  initAlertModal();
+  await loadSettings();
+  await loadTasks();
+
+  const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
+  if (feed && feed.children.length === 0) {
+    addChatBubble("Hello! I'm Nova, your personal task assistant powered by Google Gemini AI. Tell me what you finished or need to do, or ask me for productivity advice!", 'assistant');
+  }
+
+  window.myassist.onWidgetModeChanged((isWidget) => {
+    document.body.classList.toggle('widget-mode', isWidget);
+  });
+
+  window.myassist.onTriggerReminder((task) => {
+    playChimeSound();
+    triggerVisualAlertModal(task);
+    showToast(`🔔 REMINDER DUE: ${task.title}`, 'info');
+    loadTasks();
+  });
+});
+
+function initAlertModal() {
+  const snoozeBtn = document.getElementById('alert-snooze-btn');
+  const dismissBtn = document.getElementById('alert-dismiss-btn');
+  const overlay = document.getElementById('reminder-alert-overlay');
+
+  if (snoozeBtn) {
+    snoozeBtn.addEventListener('click', async () => {
+      if (currentAlertTaskId) {
+        await window.myassist.snoozeTask({ id: currentAlertTaskId, minutes: 15 });
+        showToast('Snoozed for 15 minutes ⏰', 'info');
+        loadTasks();
+      }
+      if (overlay) overlay.classList.add('hidden');
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', async () => {
+      if (currentAlertTaskId) {
+        await window.myassist.updateTask({ id: currentAlertTaskId, updates: { status: 'done' } });
+        showToast('Task marked as completed! 🎉', 'success');
+        loadTasks();
+      }
+      if (overlay) overlay.classList.add('hidden');
+    });
+  }
+}
+
+function triggerVisualAlertModal(task) {
+  currentAlertTaskId = task.id;
+  const overlay = document.getElementById('reminder-alert-overlay');
+  const titleEl = document.getElementById('alert-task-title');
+  const metaEl = document.getElementById('alert-task-meta');
+
+  if (titleEl) titleEl.textContent = task.title;
+  if (metaEl) {
+    metaEl.textContent = `Category: ${task.category} | Priority: ${(task.priority || 'medium').toUpperCase()} | Due: ${task.dueTime || 'Now'}`;
+  }
+
+  if (overlay) overlay.classList.remove('hidden');
+}
+
+function initTabs() {
+  const navItems = document.querySelectorAll('.nav-item');
+  const panels = document.querySelectorAll('.tab-panel');
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const tabName = item.getAttribute('data-tab');
+      navItems.forEach(n => n.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+
+      item.classList.add('active');
+      const targetPanel = document.getElementById(`panel-${tabName}`);
+      if (targetPanel) targetPanel.classList.add('active');
+    });
+  });
+}
+
+function initTimeWidget() {
+  function updateClock() {
+    const now = new Date();
+    const timeEl = document.getElementById('clock-time');
+    const dateEl = document.getElementById('clock-date');
+
+    if (timeEl) {
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      timeEl.textContent = `${h}:${m}`;
+    }
+
+    if (dateEl) {
+      const options = { weekday: 'short', month: 'short', day: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString(undefined, options);
+    }
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
+function initEventListeners() {
+  const sendBtn = document.getElementById('send-btn');
+  const taskInput = document.getElementById('task-input');
+  const aiSummaryBtn = document.getElementById('ai-summary-btn');
+  const widgetToggleBtn = document.getElementById('widget-toggle-btn');
+  const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+  if (sendBtn) sendBtn.addEventListener('click', handleUserSubmit);
+
+  if (taskInput) {
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleUserSubmit();
+      }
+    });
+  }
+
+  if (aiSummaryBtn) {
+    aiSummaryBtn.addEventListener('click', handleAiSummary);
+  }
+
+  if (widgetToggleBtn) {
+    widgetToggleBtn.addEventListener('click', () => {
+      const isWidget = !document.body.classList.contains('widget-mode');
+      window.myassist.toggleWidgetMode(isWidget);
+    });
+  }
+
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', async () => {
+      const apiKey = document.getElementById('setting-gemini-key').value.trim();
+      const soundEnabled = document.getElementById('setting-sound').checked;
+      const notifEnabled = document.getElementById('setting-notif').checked;
+
+      await window.myassist.updateSettings({
+        geminiApiKey: apiKey,
+        soundEnabled,
+        notificationsEnabled: notifEnabled
+      });
+
+      showToast('Settings saved successfully!', 'success');
+      loadSettings();
+    });
+  }
+
+  // Quick Action Chips
+  document.querySelectorAll('.tag-chip[data-fill]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const textToFill = chip.getAttribute('data-fill');
+      if (taskInput) {
+        taskInput.value = textToFill;
+        taskInput.focus();
+      }
+    });
+  });
+
+  document.querySelectorAll('.tag-chip[data-tag]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const tag = chip.getAttribute('data-tag');
+      if (taskInput) {
+        taskInput.value = taskInput.value ? `${taskInput.value} ${tag}` : tag;
+        taskInput.focus();
+      }
+    });
+  });
+}
+
+async function loadSettings() {
+  settings = await window.myassist.getSettings();
+  const apiKeyEl = document.getElementById('setting-gemini-key');
+  const soundEl = document.getElementById('setting-sound');
+  const notifEl = document.getElementById('setting-notif');
+
+  if (apiKeyEl && settings.geminiApiKey) apiKeyEl.value = settings.geminiApiKey;
+  if (soundEl) soundEl.checked = settings.soundEnabled !== false;
+  if (notifEl) notifEl.checked = settings.notificationsEnabled !== false;
+}
+
+async function loadTasks() {
+  tasks = await window.myassist.getTasks();
+  renderTodayTomorrow();
+  renderHistoryLog();
+  updateStats();
+}
+
+function updateStats() {
+  const doneTodayCount = tasks.filter(t => t.status === 'done').length;
+  const pendingCount = tasks.filter(t => t.status === 'pending').length;
+
+  const doneEl = document.getElementById('stat-done-today');
+  const pendingEl = document.getElementById('stat-pending');
+
+  if (doneEl) doneEl.textContent = doneTodayCount;
+  if (pendingEl) pendingEl.textContent = pendingCount;
+}
+
+async function handleUserSubmit() {
+  try {
+    const taskInput = document.getElementById('task-input');
+    const inputStr = taskInput.value.trim();
+    if (!inputStr) return;
+
+    addChatBubble(inputStr, 'user');
+    taskInput.value = '';
+
+    const parsed = await window.myassist.parseInput(inputStr);
+
+    if (parsed) {
+      const newTask = await window.myassist.addTask(parsed);
+      await loadTasks();
+
+      let replyMsg = `Understood! Scheduled for **${newTask.dueDate}** at **${newTask.dueTime}**: "${newTask.title}".`;
+      if (newTask.type === 'completed') {
+        replyMsg = `Awesome! Logged task "${newTask.title}" as completed. Great job!`;
+      }
+
+      addChatBubble(replyMsg, 'assistant', newTask);
+      playChimeSound();
+    } else {
+      try {
+        const response = await window.myassist.geminiChat(inputStr);
+        addChatBubble(response, 'assistant');
+      } catch (err) {
+        addChatBubble("I'm here to help! Ask me anything or tell me a task to schedule.", 'assistant');
+      }
+    }
+  } catch (e) {
+    console.error('Error handling submit:', e);
+    showToast('Task submitted', 'info');
+    loadTasks();
+  }
+}
+
+async function handleAiSummary() {
+  addChatBubble("✨ Generating your daily productivity summary with Gemini AI...", 'assistant');
+  try {
+    const summary = await window.myassist.geminiSummary();
+    addChatBubble(summary, 'assistant');
+  } catch (e) {
+    showToast("Failed to generate AI summary. Check your Gemini API key in Settings.", 'error');
+  }
+}
+
+function addChatBubble(text, sender, parsedTask = null) {
+  const chatHistory = document.getElementById('chat-feed') || document.getElementById('chat-history');
+  if (!chatHistory) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${sender}`;
+
+  const senderTitle = document.createElement('div');
+  senderTitle.className = 'bubble-sender';
+  senderTitle.textContent = sender === 'user' ? 'YOU' : '🤖 NOVA ASSISTANT';
+  bubble.appendChild(senderTitle);
+
+  const content = document.createElement('div');
+  content.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  bubble.appendChild(content);
+
+  if (parsedTask) {
+    const card = document.createElement('div');
+    card.className = `parsed-card ${parsedTask.type}`;
+
+    card.innerHTML = `
+      <strong>Category:</strong> ${parsedTask.category} | <strong>Priority:</strong> ${(parsedTask.priority || 'medium').toUpperCase()}<br>
+      <span class="parsed-detail">Type: ${parsedTask.type === 'completed' ? '✅ Completed' : '⏰ Reminder'} Due: ${parsedTask.dueDate} ${parsedTask.dueTime || ''}</span>
+    `;
+    bubble.appendChild(card);
+  }
+
+  chatHistory.appendChild(bubble);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function renderTodayTomorrow() {
+  const todayList = document.getElementById('today-task-list');
+  const tomorrowList = document.getElementById('tomorrow-task-list');
+
+  if (!todayList || !tomorrowList) return;
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+  const todayTasks = tasks.filter(t => t.status === 'pending' && t.dueDate <= todayStr);
+  const tomorrowTasks = tasks.filter(t => t.status === 'pending' && t.dueDate === tomorrowStr);
+
+  renderTaskGroup(todayList, todayTasks, 'No pending tasks for today!');
+  renderTaskGroup(tomorrowList, tomorrowTasks, 'No pending tasks for tomorrow!');
+}
+
+function renderTaskGroup(container, taskGroup, emptyMsg) {
+  container.innerHTML = '';
+
+  if (taskGroup.length === 0) {
+    container.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+    return;
+  }
+
+  taskGroup.forEach(task => {
+    const item = document.createElement('div');
+    item.className = 'task-item';
+
+    item.innerHTML = `
+      <input type="checkbox" class="task-checkbox" data-id="${task.id}">
+      <div class="task-content">
+        <div class="task-title">${task.title}</div>
+        <div class="task-meta">
+          <span class="category-tag">${task.category}</span>
+          <span class="priority-tag priority-${task.priority}">${(task.priority || 'medium').toUpperCase()}</span>
+          ${task.dueTime ? `<span>🕒 ${task.dueTime}</span>` : ''}
+          ${task.recurring !== 'none' ? `<span class="recurring-tag">🔄 ${task.recurring}</span>` : ''}
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="snooze-btn" data-id="${task.id}">+15m</button>
+        <button class="icon-btn delete-btn" data-id="${task.id}">🗑️</button>
+      </div>
+    `;
+
+    container.appendChild(item);
+  });
+
+  container.querySelectorAll('.task-checkbox').forEach(cb => {
+    cb.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      await window.myassist.updateTask({ id, updates: { status: 'done' } });
+      playChimeSound();
+      showToast('Task marked as completed! 🎉', 'success');
+      loadTasks();
+    });
+  });
+
+  container.querySelectorAll('.snooze-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      await window.myassist.snoozeTask({ id, minutes: 15 });
+      showToast('Snoozed for 15 minutes ⏰', 'info');
+      loadTasks();
+    });
+  });
+
+  container.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      await window.myassist.deleteTask(id);
+      showToast('Task deleted', 'info');
+      loadTasks();
+    });
+  });
+}
+
+function renderHistoryLog() {
+  const historyContainer = document.getElementById('history-container');
+  if (!historyContainer) return;
+
+  const completedTasks = tasks.filter(t => t.status === 'done');
+  historyContainer.innerHTML = '';
+
+  if (completedTasks.length === 0) {
+    historyContainer.innerHTML = '<div class="empty-state">No completed activity logged yet.</div>';
+    return;
+  }
+
+  completedTasks.forEach(task => {
+    const item = document.createElement('div');
+    item.className = 'history-card';
+    item.innerHTML = `
+      <div class="history-info">
+        <div class="check-icon">✓</div>
+        <div>
+          <div class="task-title">${task.title}</div>
+          <div class="task-meta">
+            <span class="category-tag">${task.category}</span>
+            <span>Logged: ${new Date(task.completedAt || task.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn delete-btn" data-id="${task.id}">🗑️</button>
+    `;
+    historyContainer.appendChild(item);
+  });
+
+  historyContainer.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      await window.myassist.deleteTask(id);
+      loadTasks();
+    });
+  });
+}
+
+// Clear, Loud, Rich 2-Tone Notification Chime (0.45s)
+function playChimeSound() {
+  if (settings.soundEnabled === false) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    // Tone 1: C5 (523Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.7, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.18);
+
+    // Tone 2: G5 (783.99Hz)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(783.99, ctx.currentTime + 0.12);
+    gain2.gain.setValueAtTime(0.8, ctx.currentTime + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.45);
+  } catch (e) {
+    console.error('Audio playback failed:', e);
+  }
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+
+  const iconMap = {
+    info: '🔔',
+    success: '✨',
+    error: '⚠️'
+  };
+
+  toast.innerHTML = `
+    <span>${iconMap[type] || '🔔'}</span>
+    <div>${message}</div>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
+}

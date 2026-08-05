@@ -1,0 +1,93 @@
+{
+  "tasks": [
+    {
+      "id": "task_1785927769593_qg3g",
+      "title": "test",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-05T11:02:49.593Z",
+      "completedAt": null,
+      "dueDate": "2026-08-05",
+      "dueTime": "16:32:54",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "task_1785927742387_yjp0",
+      "title": "remind me in 5 sec",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-05T11:02:22.388Z",
+      "completedAt": null,
+      "dueDate": "2026-08-05",
+      "dueTime": "16:32:27",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "task_1785927664366_frbd",
+      "title": "remind me in 5 sec",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-05T11:01:04.366Z",
+      "completedAt": null,
+      "dueDate": "2026-08-05",
+      "dueTime": "16:31:09",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "task_1785927653049_4r59",
+      "title": "remind me in 5 sec",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-05T11:00:53.050Z",
+      "completedAt": null,
+      "dueDate": "2026-08-05",
+      "dueTime": "16:30:58",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "init-1",
+      "title": "Welcome to MyAssist! Desktop Task Assistant is ready.",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "high",
+      "recurring": "none",
+      "createdAt": "2026-08-05T10:59:23.960Z",
+      "dueDate": "2026-08-05",
+      "dueTime": "18:00:00",
+      "reminder": true,
+      "notified": false,
+      "notes": "Initial welcome task."
+    }
+  ],
+  "settings": {
+    "assistantName": "Nova",
+    "theme": "dark",
+    "soundEnabled": true,
+    "notificationsEnabled": true
+  }
+}

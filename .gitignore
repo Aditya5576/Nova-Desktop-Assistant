@@ -1,0 +1,6 @@
+node_modules/
+.tmp/
+.gemini/
+*.log
+test_*.js
+scripts/tempShortcut.vbs

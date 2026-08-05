@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyAssist - Desktop Personal Assistant</title>
+
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- High Priority Visual Reminder Alert Overlay -->
+  <div id="reminder-alert-overlay" class="alert-overlay hidden">
+    <div class="alert-modal">
+      <div class="alert-header">
+        <span class="alert-bell-icon">🔔</span>
+        <div class="alert-title-wrap">
+          <div class="alert-badge">REMINDER DUE NOW!</div>
+          <h3 id="alert-task-title">Task Title Here</h3>
+        </div>
+      </div>
+      <div class="alert-meta" id="alert-task-meta">
+        Category: General | Priority: HIGH | Due: 16:35
+      </div>
+      <div class="alert-actions">
+        <button id="alert-snooze-btn" class="alert-btn snooze">⏰ Snooze +15m</button>
+        <button id="alert-dismiss-btn" class="alert-btn dismiss">✓ Mark Completed</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Application Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="assistant-avatar">
+          <div class="avatar-orb"></div>
+          <div class="avatar-ring"></div>
+        </div>
+        <div class="brand-text">
+          <h1>MyAssist</h1>
+          <div class="status-badge">
+            <span class="pulse-dot"></span>
+            Active & Listening
+            <span class="hotkey-kbd">Alt+Space</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="stats-pills">
+          <div class="stat-pill highlight">
+            <span>✨ Done Today</span>
+            <strong id="stat-done-today">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>⏰ Pending</span>
+            <strong id="stat-pending">0</strong>
+          </div>
+        </div>
+
+        <button class="btn-secondary" id="toggle-widget-btn" title="Toggle Floating Compact Widget Mode">
+          🔲 Mini Widget
+        </button>
+
+        <div class="time-widget">
+          <div class="clock-time" id="clock-time">00:00</div>
+          <div class="clock-date" id="clock-date">Loading date...</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Body with Sidebar and Content -->
+    <div class="app-body">
+      <!-- Sidebar Navigation -->
+      <nav class="sidebar" id="app-sidebar">
+        <div class="nav-group">
+          <button class="nav-item active" data-tab="assistant-tab">
+            <span class="nav-icon">💬</span>
+            <span class="nav-text">Assistant Feed</span>
+          </button>
+          <button class="nav-item" data-tab="plan-tab">
+            <span class="nav-icon">📅</span>
+            <span class="nav-text">Today & Tomorrow</span>
+            <span class="badge" id="upcoming-badge">0</span>
+          </button>
+          <button class="nav-item" data-tab="history-tab">
+            <span class="nav-icon">📜</span>
+            <span class="nav-text">Completed Log</span>
+          </button>
+        </div>
+
+        <div class="nav-footer">
+          <button class="nav-item" data-tab="settings-tab">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text">Settings</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Main Content Panel -->
+      <main class="main-content">
+
+        <!-- TAB 1: ASSISTANT FEED & CONVERSATIONAL INPUT -->
+        <section class="tab-panel active" id="assistant-tab">
+          <div class="feed-container">
+            <div class="chat-history" id="chat-feed">
+              <!-- Dynamically populated assistant chat messages -->
+            </div>
+
+            <!-- Smart Input Bar -->
+            <div class="command-box">
+              <div class="quick-tags">
+                <span class="tag-label">Quick Actions:</span>
+                <button class="tag-chip ai-summary-chip" id="ai-summary-btn">✨ AI Daily Summary</button>
+                <button class="tag-chip" data-tag="#Work">#Work</button>
+                <button class="tag-chip" data-tag="#Personal">#Personal</button>
+                <button class="tag-chip" data-tag="🔴 Urgent">🔴 Urgent</button>
+                <button class="tag-chip" data-tag="Remind me to">⏰ Remind me...</button>
+              </div>
+
+              <div class="input-wrapper">
+                <input type="text" id="task-input" placeholder="Ask Nova anything or log a task... (e.g. 'How can I organize my day?' or 'Finished report today')" autocomplete="off">
+                <button class="send-btn" id="send-btn">
+                  <span>Send</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
+              <div class="input-hint">💡 <strong>Gemini AI Active:</strong> You can ask Nova for productivity advice, task breakdowns, or task logging!</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: TODAY & TOMORROW PLAN -->
+        <section class="tab-panel" id="panel-plan-tab">
+          <div class="panel-header">
+            <div>
+              <h2>Today & Tomorrow Plan</h2>
+              <p class="subtitle">Organized by priority and local scheduled times</p>
+            </div>
+          </div>
+
+          <div class="plan-sections">
+            <!-- Today Card -->
+            <div class="plan-card">
+              <div class="card-header">
+                <h3>📌 Today's Tasks</h3>
+                <span class="count-badge" id="today-count">0</span>
+              </div>
+              <div class="task-list" id="today-task-list">
+                <!-- Dynamically populated today tasks -->
+              </div>
+            </div>
+
+            <!-- Tomorrow Card -->
+            <div class="plan-card">
+              <div class="card-header">
+                <h3>⏩ Tomorrow's Plan</h3>
+                <span class="count-badge" id="tomorrow-count">0</span>
+              </div>
+              <div class="task-list" id="tomorrow-task-list">
+                <!-- Dynamically populated tomorrow tasks -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: COMPLETED LOG -->
+        <section class="tab-panel" id="panel-history-tab">
+          <div class="panel-header">
+            <div>
+              <h2>Completed Activity Log</h2>
+              <p class="subtitle">Track your finished work and productivity achievements</p>
+            </div>
+          </div>
+
+          <div class="history-container" id="history-container">
+            <!-- Dynamically populated completed tasks -->
+          </div>
+        </section>
+
+        <!-- TAB 4: SETTINGS -->
+        <section class="tab-panel" id="panel-settings-tab">
+          <div class="panel-header">
+            <div>
+              <h2>Settings & Preferences</h2>
+              <p class="subtitle">Configure AI integration and app behavior</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>🤖 Google Gemini AI Integration</h3>
+              <div class="setting-item">
+                <label for="setting-gemini-key">Gemini API Key (Free API from Google AI Studio):</label>
+                <input type="password" id="setting-gemini-key" class="text-input" placeholder="AIzaSy..." style="width: 100%;">
+                <p class="setting-desc">Get your free key from <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-blue);">Google AI Studio</a>. Enables conversational advice, JSON parsing, and daily productivity summaries!</p>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>🔔 Notifications & Alerts</h3>
+              <div class="setting-item toggle-item">
+                <div>
+                  <label>Sound Alerts</label>
+                  <p class="setting-desc">Play 2-tone chime when a task is due</p>
+                </div>
+                <input type="checkbox" id="setting-sound" checked>
+              </div>
+              <div class="setting-item toggle-item">
+                <div>
+                  <label>Desktop Notifications</label>
+                  <p class="setting-desc">Show Windows native toast notifications</p>
+                </div>
+                <input type="checkbox" id="setting-notif" checked>
+              </div>
+              <button class="send-btn" id="save-settings-btn" style="margin-top: 10px;">Save Settings</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
