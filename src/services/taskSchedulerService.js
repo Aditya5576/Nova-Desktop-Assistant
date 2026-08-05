@@ -19,8 +19,8 @@ class TaskSchedulerService {
     try {
       const notifyPs1 = path.join(this.scriptsDir, 'sendToast.ps1');
       const psContent = `param (
-    [string]$Title = "Reminder Due",
-    [string]$Body = "Task reminder due now!"
+    [string]$Title = "Task Reminder",
+    [string]$Body = "Reminder due now!"
 )
 
 try {
@@ -32,7 +32,7 @@ try {
 <toast>
   <visual>
     <binding template="ToastGeneric">
-      <text>🔔 $Title</text>
+      <text>$Title</text>
       <text>$Body</text>
     </binding>
   </visual>

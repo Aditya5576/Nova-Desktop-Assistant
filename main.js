@@ -48,7 +48,7 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Clean Minimalist Windows Toast Notification (Only Task Title & Clean Body)
+// Clean Minimalist Windows Toast Notification (Clean Text, No Encoding Glitches)
 function sendWindowsToastNotification(title, body) {
   try {
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
@@ -223,7 +223,7 @@ function startReminderChecker() {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Trigger Clean Minimalist Windows Native Desktop Notification
+          // Trigger Clean Windows Native Desktop Notification
           const priorityStr = (task.priority || 'medium').toUpperCase();
           const bodyMsg = `Priority: ${priorityStr}${task.recurring !== 'none' ? ` | Recurring: ${task.recurring}` : ''}`;
           
