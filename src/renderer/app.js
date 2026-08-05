@@ -73,7 +73,7 @@ function initEventListeners() {
   const sendBtn = document.getElementById('send-btn');
   const taskInput = document.getElementById('task-input');
   const aiSummaryBtn = document.getElementById('ai-summary-btn');
-  const widgetToggleBtn = document.getElementById('widget-toggle-btn');
+  const widgetToggleBtn = document.getElementById('toggle-widget-btn');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
 
   if (sendBtn) sendBtn.addEventListener('click', handleUserSubmit);
@@ -258,8 +258,20 @@ function renderTodayTomorrow() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
-  const todayTasks = tasks.filter(t => t.status === 'pending' && t.dueDate <= todayStr);
-  const tomorrowTasks = tasks.filter(t => t.status === 'pending' && t.dueDate === tomorrowStr);
+  const todayTasks = tasks.filter(t => t.status === 'pending' && t.dueDate <= todayStr)
+                          .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+
+  const tomorrowTasks = tasks.filter(t => t.status === 'pending' && t.dueDate === tomorrowStr)
+                             .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+
+  // Update Badges
+  const todayCountEl = document.getElementById('today-count');
+  const tomorrowCountEl = document.getElementById('tomorrow-count');
+  const upcomingBadgeEl = document.getElementById('upcoming-badge');
+
+  if (todayCountEl) todayCountEl.textContent = todayTasks.length;
+  if (tomorrowCountEl) tomorrowCountEl.textContent = tomorrowTasks.length;
+  if (upcomingBadgeEl) upcomingBadgeEl.textContent = todayTasks.length + tomorrowTasks.length;
 
   renderTaskGroup(todayList, todayTasks, 'No pending tasks for today!');
   renderTaskGroup(tomorrowList, tomorrowTasks, 'No pending tasks for tomorrow!');
