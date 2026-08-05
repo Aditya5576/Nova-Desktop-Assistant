@@ -48,13 +48,13 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Big Expanded Windows Reminder Toast Notification
-function sendWindowsToastNotification(title, body, priority = 'MEDIUM') {
+// Clean Minimalist Windows Toast Notification (Only Task Title & Clean Body)
+function sendWindowsToastNotification(title, body) {
   try {
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
-    const safeTitle = (title || '🔔 REMINDER DUE NOW!').replace(/"/g, '`"');
-    const safeBody = (body || 'Task reminder due now!').replace(/"/g, '`"');
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Priority "${priority}"`;
+    const safeTitle = (title || 'Task Reminder').replace(/"/g, '`"');
+    const safeBody = (body || 'Reminder due now!').replace(/"/g, '`"');
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}"`;
     exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
@@ -223,11 +223,13 @@ function startReminderChecker() {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Trigger Big Expanded Windows Native Desktop Notification
+          // Trigger Clean Minimalist Windows Native Desktop Notification
+          const priorityStr = (task.priority || 'medium').toUpperCase();
+          const bodyMsg = `Priority: ${priorityStr}${task.recurring !== 'none' ? ` | Recurring: ${task.recurring}` : ''}`;
+          
           sendWindowsToastNotification(
-            `🔔 REMINDER DUE NOW!`,
-            task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : ''),
-            (task.priority || 'medium').toUpperCase()
+            task.title,
+            bodyMsg
           );
         }
       }

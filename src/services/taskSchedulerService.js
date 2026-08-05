@@ -19,10 +19,8 @@ class TaskSchedulerService {
     try {
       const notifyPs1 = path.join(this.scriptsDir, 'sendToast.ps1');
       const psContent = `param (
-    [string]$Title = "🔔 MyAssist Reminder",
-    [string]$Body = "You have a scheduled task reminder!",
-    [string]$Category = "General",
-    [string]$Priority = "MEDIUM"
+    [string]$Title = "Reminder Due",
+    [string]$Body = "Task reminder due now!"
 )
 
 try {
@@ -31,12 +29,11 @@ try {
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
     $template = @"
-<toast scenario="reminder">
+<toast>
   <visual>
     <binding template="ToastGeneric">
-      <text hint-maxLines="1">$Title</text>
-      <text hint-maxLines="3">$Body</text>
-      <text placement="attribution">MyAssist Task Assistant • Priority: $Priority</text>
+      <text>🔔 $Title</text>
+      <text>$Body</text>
     </binding>
   </visual>
 </toast>
@@ -81,7 +78,9 @@ try {
       const psScript = path.join(this.scriptsDir, 'sendToast.ps1');
       const safeTitle = (task.title || 'Task Reminder').replace(/"/g, '`"');
       const priorityStr = (task.priority || 'medium').toUpperCase();
-      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "🔔 REMINDER DUE NOW!" -Body "${safeTitle}" -Priority "${priorityStr}"`;
+      const bodyDetails = `Priority: ${priorityStr}${task.recurring !== 'none' ? ` | Recurring: ${task.recurring}` : ''}`;
+      
+      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "${safeTitle}" -Body "${bodyDetails}"`;
 
       // Remove previous task if exists
       exec(`schtasks /Delete /TN "${taskName}" /F`, () => {

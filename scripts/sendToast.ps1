@@ -1,8 +1,6 @@
 param (
-    [string]$Title = "🔔 MyAssist Reminder",
-    [string]$Body = "You have a scheduled task reminder!",
-    [string]$Category = "General",
-    [string]$Priority = "MEDIUM"
+    [string]$Title = "Reminder Due",
+    [string]$Body = "Task reminder due now!"
 )
 
 try {
@@ -11,12 +9,11 @@ try {
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
     $template = @"
-<toast scenario="reminder">
+<toast>
   <visual>
     <binding template="ToastGeneric">
-      <text hint-maxLines="1">$Title</text>
-      <text hint-maxLines="3">$Body</text>
-      <text placement="attribution">MyAssist Task Assistant • Priority: $Priority</text>
+      <text>🔔 $Title</text>
+      <text>$Body</text>
     </binding>
   </visual>
 </toast>
