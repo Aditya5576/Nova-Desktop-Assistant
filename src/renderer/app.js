@@ -1,13 +1,11 @@
 // Renderer App logic for MyAssist
 let tasks = [];
 let settings = {};
-let currentAlertTaskId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initTimeWidget();
   initEventListeners();
-  initAlertModal();
   await loadSettings();
   await loadTasks();
 
@@ -22,53 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.myassist.onTriggerReminder((task) => {
     playChimeSound();
-    triggerVisualAlertModal(task);
     showToast(`🔔 REMINDER DUE: ${task.title}`, 'info');
     loadTasks();
   });
 });
-
-function initAlertModal() {
-  const snoozeBtn = document.getElementById('alert-snooze-btn');
-  const dismissBtn = document.getElementById('alert-dismiss-btn');
-  const overlay = document.getElementById('reminder-alert-overlay');
-
-  if (snoozeBtn) {
-    snoozeBtn.addEventListener('click', async () => {
-      if (currentAlertTaskId) {
-        await window.myassist.snoozeTask({ id: currentAlertTaskId, minutes: 15 });
-        showToast('Snoozed for 15 minutes ⏰', 'info');
-        loadTasks();
-      }
-      if (overlay) overlay.classList.add('hidden');
-    });
-  }
-
-  if (dismissBtn) {
-    dismissBtn.addEventListener('click', async () => {
-      if (currentAlertTaskId) {
-        await window.myassist.updateTask({ id: currentAlertTaskId, updates: { status: 'done' } });
-        showToast('Task marked as completed! 🎉', 'success');
-        loadTasks();
-      }
-      if (overlay) overlay.classList.add('hidden');
-    });
-  }
-}
-
-function triggerVisualAlertModal(task) {
-  currentAlertTaskId = task.id;
-  const overlay = document.getElementById('reminder-alert-overlay');
-  const titleEl = document.getElementById('alert-task-title');
-  const metaEl = document.getElementById('alert-task-meta');
-
-  if (titleEl) titleEl.textContent = task.title;
-  if (metaEl) {
-    metaEl.textContent = `Category: ${task.category} | Priority: ${(task.priority || 'medium').toUpperCase()} | Due: ${task.dueTime || 'Now'}`;
-  }
-
-  if (overlay) overlay.classList.remove('hidden');
-}
 
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');

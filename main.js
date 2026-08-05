@@ -196,18 +196,10 @@ function startReminderChecker() {
         if (isTodayOrPastDate && isTimeDue) {
           db.updateTask(task.id, { notified: true });
 
-          // Play Audio Chime & Bring Window to Front for Visual Alert Modal
+          // Play Audio Chime
           playWindowsAudioChime();
+
           if (mainWindow && !mainWindow.isDestroyed()) {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-            mainWindow.show();
-            mainWindow.setAlwaysOnTop(true);
-            mainWindow.focus();
-            setTimeout(() => {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.setAlwaysOnTop(false);
-              }
-            }, 300);
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
