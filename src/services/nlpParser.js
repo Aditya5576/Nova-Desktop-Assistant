@@ -1,5 +1,6 @@
 /**
  * Natural Language Processing helper for MyAssist
+ * Fixes "secs", "mins", "hrs" plural word variations
  */
 
 function getLocalDateString(d = new Date()) {
@@ -117,26 +118,26 @@ function parseTaskInput(inputStr) {
     }
   }
 
-  // 6. PARSE DECIMAL & INTEGER RELATIVE TIMING: "in 1.1 min", "in 0.5 hours", "in 10 sec"
-  const relSecMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(sec|seconds|second|s)\b/i);
-  const relMinMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(min|mins|minute|minutes|m)\b/i);
-  const relHourMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(hour|hours|hr|hrs|h)\b/i);
+  // 6. PARSE DECIMAL & INTEGER RELATIVE TIMING: "in 10 secs", "in 1.1 mins", "in 2 sec"
+  const relSecMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second|s)\b/i);
+  const relMinMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(mins|min|minutes|minute|m)\b/i);
+  const relHourMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(hrs|hr|hours|hour|h)\b/i);
 
   if (relSecMatch) {
     const addSecs = parseFloat(relSecMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addSecs * 1000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(sec|seconds|second|s)\b/gi, '').trim();
+    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(secs|sec|seconds|second|s)\b/gi, '').trim();
   } else if (relMinMatch) {
     const addMins = parseFloat(relMinMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addMins * 60000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(min|mins|minute|minutes|m)\b/gi, '').trim();
+    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(mins|min|minutes|minute|m)\b/gi, '').trim();
   } else if (relHourMatch) {
     const addHours = parseFloat(relHourMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addHours * 3600000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(hour|hours|hr|hrs|h)\b/gi, '').trim();
+    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(hrs|hr|hours|hour|h)\b/gi, '').trim();
   }
 
   // 7. PARSE ABSOLUTE TIME if relative not set
@@ -208,7 +209,7 @@ function parseTaskInput(inputStr) {
   // Auto category
   if (category === 'General') {
     const titleLower = title.toLowerCase();
-    if (titleLower.match(/meet|call|email|project|report|presentation|client|review|bug|code|desk/)) {
+    if (titleLower.match(/meet|call|email|project|report|presentation|client|review|bug|code|desk|sap|api/)) {
       category = 'Work';
     } else if (titleLower.match(/health|doctor|workout|gym|run|walk|water|medicine|meditation/)) {
       category = 'Health';
