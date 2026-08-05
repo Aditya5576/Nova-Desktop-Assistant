@@ -44,7 +44,7 @@ try {
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
     $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(5)
     
-    $appId = "com.myassist.desktop"
+    $appId = "com.nova.desktop"
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
     [System.Media.SystemSounds]::Exclamation.Play()

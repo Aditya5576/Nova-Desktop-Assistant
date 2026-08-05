@@ -7,7 +7,7 @@ const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
 
 // Register Windows App User Model ID for native instant Windows OS Notifications
-const APP_USER_MODEL_ID = 'com.myassist.desktop';
+const APP_USER_MODEL_ID = 'com.nova.desktop';
 if (process.platform === 'win32') {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
@@ -71,7 +71,7 @@ function createWindow() {
     height: 620,
     minWidth: 420,
     minHeight: 360,
-    title: 'MyAssist - Desktop Task Assistant',
+    title: 'Nova - Desktop Task Assistant',
     backgroundColor: '#0f172a',
     show: false,
     frame: true,
@@ -142,7 +142,7 @@ function createSystemTray() {
     }
 
     tray = new Tray(trayIcon);
-    tray.setToolTip('MyAssist - Click to toggle dashboard');
+    tray.setToolTip('Nova - Click to toggle dashboard');
 
     const contextMenu = Menu.buildFromTemplate([
       {
@@ -158,7 +158,7 @@ function createSystemTray() {
       },
       { type: 'separator' },
       {
-        label: 'Exit MyAssist',
+        label: 'Exit Nova',
         click: () => {
           app.isQuitting = true;
           app.quit();
