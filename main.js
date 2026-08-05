@@ -5,9 +5,10 @@ const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
 
-// Set Windows App User Model ID for native Windows OS Notifications
+// Register Windows App User Model ID for native instant Windows OS Notifications
+const APP_USER_MODEL_ID = 'com.myassist.desktop';
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.myassist.desktop');
+  app.setAppUserModelId(APP_USER_MODEL_ID);
 }
 
 // Remove native default menu bar
@@ -46,12 +47,27 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
+// Instant Native Windows Toast Notification (0ms delay, branded MyAssist header)
 function sendWindowsToastNotification(title, body) {
-  const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
-  const safeTitle = (title || '🔔 MyAssist Reminder').replace(/"/g, '`"');
-  const safeBody = (body || 'Task reminder due now!').replace(/"/g, '`"');
-  const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}"`;
-  exec(cmd, () => {});
+  try {
+    if (Notification.isSupported()) {
+      const icoPath = path.join(__dirname, 'assets', 'icon.png');
+      const notif = new Notification({
+        title: title || 'MyAssist Reminder',
+        body: body || 'Task reminder due now!',
+        icon: fs.existsSync(icoPath) ? icoPath : undefined,
+        silent: false
+      });
+
+      notif.on('click', () => {
+        toggleWindowVisibility();
+      });
+
+      notif.show();
+    }
+  } catch (err) {
+    console.error('Failed to trigger native toast notification:', err);
+  }
 }
 
 function createWindow() {
@@ -216,9 +232,9 @@ function startReminderChecker() {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Trigger Guaranteed Windows Native Toast Notification
+          // Trigger Instant Windows Native Desktop Notification
           sendWindowsToastNotification(
-            `🔔 MyAssist Reminder [${(task.priority || 'medium').toUpperCase()}]`,
+            `🔔 MyAssist [${(task.priority || 'medium').toUpperCase()}]`,
             task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : '')
           );
         }
