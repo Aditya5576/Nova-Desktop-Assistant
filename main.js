@@ -48,24 +48,14 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Instant Native Windows Toast Notification (0ms delay, branded MyAssist header)
-function sendWindowsToastNotification(title, body) {
+// Big Expanded Windows Reminder Toast Notification
+function sendWindowsToastNotification(title, body, priority = 'MEDIUM') {
   try {
-    if (Notification.isSupported()) {
-      const icoPath = path.join(__dirname, 'assets', 'icon.png');
-      const notif = new Notification({
-        title: title || 'MyAssist Reminder',
-        body: body || 'Task reminder due now!',
-        icon: fs.existsSync(icoPath) ? icoPath : undefined,
-        silent: false
-      });
-
-      notif.on('click', () => {
-        toggleWindowVisibility();
-      });
-
-      notif.show();
-    }
+    const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
+    const safeTitle = (title || '🔔 REMINDER DUE NOW!').replace(/"/g, '`"');
+    const safeBody = (body || 'Task reminder due now!').replace(/"/g, '`"');
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Priority "${priority}"`;
+    exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
   }
@@ -233,10 +223,11 @@ function startReminderChecker() {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Trigger Instant Windows Native Desktop Notification
+          // Trigger Big Expanded Windows Native Desktop Notification
           sendWindowsToastNotification(
-            `🔔 MyAssist [${(task.priority || 'medium').toUpperCase()}]`,
-            task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : '')
+            `🔔 REMINDER DUE NOW!`,
+            task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : ''),
+            (task.priority || 'medium').toUpperCase()
           );
         }
       }

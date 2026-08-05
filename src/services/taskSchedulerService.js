@@ -20,7 +20,9 @@ class TaskSchedulerService {
       const notifyPs1 = path.join(this.scriptsDir, 'sendToast.ps1');
       const psContent = `param (
     [string]$Title = "🔔 MyAssist Reminder",
-    [string]$Body = "You have a scheduled task reminder!"
+    [string]$Body = "You have a scheduled task reminder!",
+    [string]$Category = "General",
+    [string]$Priority = "MEDIUM"
 )
 
 try {
@@ -29,11 +31,12 @@ try {
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
     $template = @"
-<toast>
+<toast scenario="reminder">
   <visual>
     <binding template="ToastGeneric">
-      <text>$Title</text>
-      <text>$Body</text>
+      <text hint-maxLines="1">$Title</text>
+      <text hint-maxLines="3">$Body</text>
+      <text placement="attribution">MyAssist Task Assistant • Priority: $Priority</text>
     </binding>
   </visual>
 </toast>
@@ -42,6 +45,8 @@ try {
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+    $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(5)
+    
     $appId = "com.myassist.desktop"
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
@@ -75,7 +80,8 @@ try {
 
       const psScript = path.join(this.scriptsDir, 'sendToast.ps1');
       const safeTitle = (task.title || 'Task Reminder').replace(/"/g, '`"');
-      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "🔔 MyAssist Reminder [${(task.priority || 'medium').toUpperCase()}]" -Body "${safeTitle}"`;
+      const priorityStr = (task.priority || 'medium').toUpperCase();
+      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "🔔 REMINDER DUE NOW!" -Body "${safeTitle}" -Priority "${priorityStr}"`;
 
       // Remove previous task if exists
       exec(`schtasks /Delete /TN "${taskName}" /F`, () => {
