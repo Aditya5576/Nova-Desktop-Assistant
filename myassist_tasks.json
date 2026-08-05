@@ -1,6 +1,23 @@
 {
   "tasks": [
     {
+      "id": "task_1785928936680_xlyg",
+      "title": "Do changes in retailer as per non trade",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-05T11:22:16.680Z",
+      "completedAt": null,
+      "dueDate": "2026-08-05",
+      "dueTime": "16:52:21",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
       "id": "task_1785928406258_7tlu",
       "title": "Add SAP API changes in Retailer",
       "type": "scheduled",
