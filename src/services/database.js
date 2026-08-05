@@ -4,7 +4,6 @@ const TaskSchedulerService = require('./taskSchedulerService');
 
 class DatabaseService {
   constructor() {
-    // Single unified database file location
     this.dbPath = path.join(__dirname, '../../myassist_tasks.json');
     this.scheduler = new TaskSchedulerService();
     this.init();
@@ -35,7 +34,8 @@ class DatabaseService {
             assistantName: 'Nova',
             theme: 'dark',
             soundEnabled: true,
-            notificationsEnabled: true
+            notificationsEnabled: true,
+            geminiApiKey: ''
           }
         };
         fs.writeFileSync(this.dbPath, JSON.stringify(initialData, null, 2), 'utf-8');

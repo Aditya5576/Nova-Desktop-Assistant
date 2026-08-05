@@ -40,7 +40,6 @@ function initTabs() {
       if (targetPanel) {
         targetPanel.classList.add('active');
       } else {
-        // Fallback: default to panel-assistant-tab
         const defaultPanel = document.getElementById('panel-assistant-tab');
         if (defaultPanel) defaultPanel.classList.add('active');
       }
@@ -105,13 +104,14 @@ function initEventListeners() {
       const soundEnabled = document.getElementById('setting-sound').checked;
       const notifEnabled = document.getElementById('setting-notif').checked;
 
-      await window.myassist.updateSettings({
+      const updated = await window.myassist.updateSettings({
         geminiApiKey: apiKey,
         soundEnabled,
         notificationsEnabled: notifEnabled
       });
 
-      showToast('Settings saved successfully!', 'success');
+      settings = updated || {};
+      showToast('Settings & API key saved successfully! 🔑', 'success');
       loadSettings();
     });
   }
@@ -144,7 +144,7 @@ async function loadSettings() {
   const soundEl = document.getElementById('setting-sound');
   const notifEl = document.getElementById('setting-notif');
 
-  if (apiKeyEl && settings.geminiApiKey) apiKeyEl.value = settings.geminiApiKey;
+  if (apiKeyEl) apiKeyEl.value = settings.geminiApiKey || '';
   if (soundEl) soundEl.checked = settings.soundEnabled !== false;
   if (notifEl) notifEl.checked = settings.notificationsEnabled !== false;
 }
@@ -366,7 +366,7 @@ function renderHistoryLog() {
   });
 }
 
-// Clear, Loud, Rich 2-Tone Notification Chime (0.45s)
+// Loud, Rich 3-Tone Tri-Chime Melody (C5 -> E5 -> G5, 100% Volume)
 function playChimeSound() {
   if (settings.soundEnabled === false) return;
   try {
@@ -374,31 +374,41 @@ function playChimeSound() {
     if (!AudioContext) return;
     const ctx = new AudioContext();
 
-    // Tone 1: C5 (523Hz)
+    // Tone 1: C5 (523.25 Hz)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
-    gain1.gain.setValueAtTime(0.7, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
-
+    gain1.gain.setValueAtTime(0.9, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
     osc1.connect(gain1);
     gain1.connect(ctx.destination);
     osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.18);
+    osc1.stop(ctx.currentTime + 0.15);
 
-    // Tone 2: G5 (783.99Hz)
+    // Tone 2: E5 (659.25 Hz)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(783.99, ctx.currentTime + 0.12);
-    gain2.gain.setValueAtTime(0.8, ctx.currentTime + 0.12);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-
+    osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.10);
+    gain2.gain.setValueAtTime(0.95, ctx.currentTime + 0.10);
+    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.28);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
-    osc2.start(ctx.currentTime + 0.12);
-    osc2.stop(ctx.currentTime + 0.45);
+    osc2.start(ctx.currentTime + 0.10);
+    osc2.stop(ctx.currentTime + 0.28);
+
+    // Tone 3: G5 (783.99 Hz) - Loud peak tone
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(783.99, ctx.currentTime + 0.20);
+    gain3.gain.setValueAtTime(1.0, ctx.currentTime + 0.20);
+    gain3.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    osc3.start(ctx.currentTime + 0.20);
+    osc3.stop(ctx.currentTime + 0.55);
   } catch (e) {
     console.error('Audio playback failed:', e);
   }

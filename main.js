@@ -5,6 +5,11 @@ const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
 
+// Set Windows App User Model ID for native Windows OS Notifications
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.myassist.desktop');
+}
+
 // Remove native default menu bar
 Menu.setApplicationMenu(null);
 
@@ -38,6 +43,14 @@ let isWidgetMode = false;
 
 function playWindowsAudioChime() {
   const cmd = `powershell -NoProfile -Command "[System.Media.SystemSounds]::Exclamation.Play()"`;
+  exec(cmd, () => {});
+}
+
+function sendWindowsToastNotification(title, body) {
+  const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
+  const safeTitle = (title || '🔔 MyAssist Reminder').replace(/"/g, '`"');
+  const safeBody = (body || 'Task reminder due now!').replace(/"/g, '`"');
+  const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}"`;
   exec(cmd, () => {});
 }
 
@@ -203,20 +216,11 @@ function startReminderChecker() {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Send native Windows desktop notification
-          if (Notification.isSupported()) {
-            const notif = new Notification({
-              title: `🔔 MyAssist Reminder [${(task.priority || 'medium').toUpperCase()}]`,
-              body: task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : ''),
-              silent: false
-            });
-
-            notif.on('click', () => {
-              toggleWindowVisibility();
-            });
-
-            notif.show();
-          }
+          // Trigger Guaranteed Windows Native Toast Notification
+          sendWindowsToastNotification(
+            `🔔 MyAssist Reminder [${(task.priority || 'medium').toUpperCase()}]`,
+            task.title + (task.recurring !== 'none' ? ` (🔄 ${task.recurring})` : '')
+          );
         }
       }
     });
@@ -259,9 +263,7 @@ ipcMain.handle('gemini-summary', async () => {
 ipcMain.on('toggle-widget-mode', (event, isWidget) => setWidgetDimensions(isWidget));
 
 ipcMain.on('show-notification', (event, { title, body }) => {
-  if (Notification.isSupported()) {
-    new Notification({ title: title || 'MyAssist', body: body || '' }).show();
-  }
+  sendWindowsToastNotification(title, body);
 });
 
 app.whenReady().then(() => {
