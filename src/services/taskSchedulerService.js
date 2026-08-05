@@ -18,14 +18,13 @@ class TaskSchedulerService {
   ensureNotifyScript() {
     try {
       const notifyPs1 = path.join(this.scriptsDir, 'sendToast.ps1');
-      const psContent = `
-param (
+      const psContent = `param (
     [string]$Title = "🔔 MyAssist Reminder",
     [string]$Body = "You have a scheduled task reminder!"
 )
 
 try {
-    [System.Media.SystemSounds]::Asterisk.Play()
+    [System.Media.SystemSounds]::Exclamation.Play()
     [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
@@ -43,9 +42,10 @@ try {
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("MyAssist").Show($toast)
+    $appId = "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe"
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
-    # Silently ignore toast errors
+    [System.Media.SystemSounds]::Exclamation.Play()
 }
 `;
       fs.writeFileSync(notifyPs1, psContent, 'utf-8');
@@ -70,46 +70,35 @@ try {
         schTime = `${schTime}:00`;
       }
 
-      const notifyScript = path.join(this.scriptsDir, 'sendToast.ps1');
-      const cleanTitle = (task.title || 'Task Reminder').replace(/[^a-zA-Z0-9\s\-]/g, '');
+      // Format date for Windows schtasks /SD
+      const formattedDateStr = `${day}-${month}-${year}`;
 
-      const trCommand = `powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File '${notifyScript}' -Title 'MyAssist Reminder' -Body '${cleanTitle}'`;
+      const psScript = path.join(this.scriptsDir, 'sendToast.ps1');
+      const safeTitle = (task.title || 'Task Reminder').replace(/"/g, '`"');
+      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "🔔 MyAssist Reminder [${(task.priority || 'medium').toUpperCase()}]" -Body "${safeTitle}"`;
 
-      exec(`powershell -NoProfile -Command "(Get-Date -Year ${year} -Month ${month} -Day ${day}).ToString('d')"`, (err, stdout) => {
-        if (err) {
-          const fallbackDate = `${month}/${day}/${year}`;
-          this.executeSchtasks(taskName, trCommand, fallbackDate, schTime);
-          return;
-        }
-        const schDate = stdout.trim() || `${month}/${day}/${year}`;
-        this.executeSchtasks(taskName, trCommand, schDate, schTime);
+      // Remove previous task if exists
+      exec(`schtasks /Delete /TN "${taskName}" /F`, () => {
+        // Create new OS task
+        const createCmd = `schtasks /Create /TN "${taskName}" /TR "${taskAction}" /SC ONCE /SD "${formattedDateStr}" /ST "${schTime}" /F /RL HIGHEST`;
+        exec(createCmd, (err) => {
+          if (!err) {
+            console.log(`Registered Windows Task Scheduler for ${taskName} at ${formattedDateStr} ${schTime}`);
+          }
+        });
       });
-    } catch (e) {
-      console.error('Fail-safe caught error in scheduleTask:', e);
+    } catch (err) {
+      console.error('Failed to schedule Windows OS task:', err);
     }
   }
 
-  executeSchtasks(taskName, trCommand, schDate, schTime) {
-    const cmd = `schtasks /Create /TN "${taskName}" /TR "${trCommand}" /SC ONCE /SD ${schDate} /ST ${schTime} /F`;
-    exec(cmd, (error, stdout, stderr) => {
-      if (error) {
-        console.warn(`Windows Task Scheduler Notice for ${taskName}:`, stderr || error.message);
-      } else {
-        console.log(`SUCCESS: Registered Windows OS Task Scheduler for ${taskName} at ${schDate} ${schTime}`);
-      }
-    });
-  }
-
-  removeTask(taskId) {
+  removeTask(id) {
     try {
-      if (!taskId) return;
-      const cleanId = String(taskId).replace(/[^a-zA-Z0-9_]/g, '_');
-      const taskName = `MyAssist_Rem_${cleanId}`;
-
-      const cmd = `schtasks /Delete /TN "${taskName}" /F`;
-      exec(cmd, () => {});
-    } catch (e) {
-      console.error('Error removing schtasks task:', e);
+      const taskId = String(id).replace(/[^a-zA-Z0-9_]/g, '_');
+      const taskName = `MyAssist_Rem_${taskId}`;
+      exec(`schtasks /Delete /TN "${taskName}" /F`, () => {});
+    } catch (err) {
+      console.error('Failed to delete Windows OS task:', err);
     }
   }
 }
