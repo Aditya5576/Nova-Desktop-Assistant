@@ -36,8 +36,14 @@ function initTabs() {
       panels.forEach(p => p.classList.remove('active'));
 
       item.classList.add('active');
-      const targetPanel = document.getElementById(`panel-${tabName}`);
-      if (targetPanel) targetPanel.classList.add('active');
+      const targetPanel = document.getElementById(`panel-${tabName}`) || document.getElementById(tabName);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      } else {
+        // Fallback: default to panel-assistant-tab
+        const defaultPanel = document.getElementById('panel-assistant-tab');
+        if (defaultPanel) defaultPanel.classList.add('active');
+      }
     });
   });
 }
