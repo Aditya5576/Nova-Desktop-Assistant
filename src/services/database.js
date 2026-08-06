@@ -208,6 +208,22 @@ class DatabaseService {
     return false;
   }
 
+  clearAllTasks() {
+    const data = this.read();
+    const existingTasks = data.tasks || [];
+    
+    // Clear scheduled OS tasks
+    existingTasks.forEach(task => {
+      try {
+        this.scheduler.removeTask(task.id);
+      } catch (e) {}
+    });
+
+    data.tasks = [];
+    this.write(data);
+    return true;
+  }
+
   getSettings() {
     const data = this.read();
     return data.settings || {};

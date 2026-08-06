@@ -75,6 +75,8 @@ function initEventListeners() {
   const aiSummaryBtn = document.getElementById('ai-summary-btn');
   const widgetToggleBtn = document.getElementById('toggle-widget-btn');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
+  const clearAllBtn = document.getElementById('clear-all-btn');
+  const clearHistoryBtn = document.getElementById('clear-history-btn');
 
   if (sendBtn) sendBtn.addEventListener('click', handleUserSubmit);
 
@@ -95,6 +97,26 @@ function initEventListeners() {
     widgetToggleBtn.addEventListener('click', () => {
       const isWidget = !document.body.classList.contains('widget-mode');
       window.myassist.toggleWidgetMode(isWidget);
+    });
+  }
+
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear ALL pending & scheduled tasks?')) {
+        await window.myassist.clearAllTasks();
+        showToast('All tasks cleared successfully 🗑️', 'info');
+        loadTasks();
+      }
+    });
+  }
+
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear task history?')) {
+        await window.myassist.clearAllTasks();
+        showToast('Completed log cleared 🗑️', 'info');
+        loadTasks();
+      }
     });
   }
 

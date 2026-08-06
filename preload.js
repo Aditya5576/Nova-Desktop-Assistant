@@ -7,6 +7,7 @@ const apiBridge = {
   updateTask: (id, updates) => ipcRenderer.invoke('update-task', { id, updates }),
   snoozeTask: (id, minutes) => ipcRenderer.invoke('snooze-task', { id, minutes }),
   deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
+  clearAllTasks: () => ipcRenderer.invoke('clear-all-tasks'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   updateSettings: (settings) => ipcRenderer.invoke('update-settings', settings),
   geminiChat: (userInput) => ipcRenderer.invoke('gemini-chat', userInput),

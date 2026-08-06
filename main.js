@@ -298,6 +298,8 @@ ipcMain.handle('snooze-task', (event, { id, minutes }) => db.snoozeTask(id, minu
 
 ipcMain.handle('delete-task', (event, id) => db.deleteTask(id));
 
+ipcMain.handle('clear-all-tasks', () => db.clearAllTasks());
+
 ipcMain.handle('get-settings', () => db.getSettings());
 
 ipcMain.handle('update-settings', (event, settings) => {

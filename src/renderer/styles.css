@@ -367,8 +367,29 @@ body {
   margin-top: 2px;
 }
 
+.btn-danger {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: var(--accent-rose);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  background: rgba(244, 63, 94, 0.3);
+  border-color: rgba(244, 63, 94, 0.6);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 /* ==========================================================================
-   CHAT FEED & COMMAND BOX (ZERO OVERLAP DEFINITIONS)
+   CHAT FEED & COMMAND BOX
    ========================================================================== */
 
 .feed-container {
