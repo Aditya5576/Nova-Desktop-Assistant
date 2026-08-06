@@ -32,7 +32,7 @@ class TaskSchedulerService {
       const psContent = `param (
     [string]$Title = "Task Reminder",
     [string]$Body = "Reminder due now!",
-    [string]$Topic = ""
+    [string]$Topic = "none"
 )
 
 try {
@@ -54,7 +54,7 @@ try {
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(5)
+    $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(10)
     
     $appId = "com.nova.desktop"
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
@@ -62,7 +62,7 @@ try {
     [System.Media.SystemSounds]::Exclamation.Play()
 }
 
-if ($Topic -and $Topic.Trim()) {
+if ($Topic -and $Topic.Trim() -and $Topic.Trim() -ne "none") {
     try {
         $safeTopic = $Topic.Trim()
         $url = "https://ntfy.sh/$safeTopic"

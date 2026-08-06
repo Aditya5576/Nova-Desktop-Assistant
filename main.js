@@ -55,8 +55,8 @@ function sendWindowsToastNotification(title, body) {
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
     const safeTitle = (title || 'Task Reminder').replace(/"/g, '`"');
     const safeBody = (body || 'Reminder due now!').replace(/"/g, '`"');
-    // Pass empty Topic so sendToast.ps1 does not duplicate the ntfy push already handled by main.js
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic ""`;
+    // Pass "none" as Topic so sendToast.ps1 shows toast but does NOT duplicate the ntfy push (handled by main.js separately)
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic "none"`;
     exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
