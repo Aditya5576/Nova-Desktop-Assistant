@@ -208,12 +208,15 @@ async function handleUserSubmit() {
       const newTask = await window.myassist.addTask(parsed);
       await loadTasks();
 
-      let replyMsg = `Right away, Aditya! Scheduled for **${newTask.dueDate}** at **${newTask.dueTime}**: "${newTask.title}".`;
+      const displayTime = newTask.dueTime ? newTask.dueTime.substring(0, 5) : newTask.dueDate;
+      const priorityTag = (newTask.priority || 'medium').toUpperCase();
+
+      let replyMsg = `Scheduled: "${newTask.title}" | 🕒 ${displayTime} | ⚡ ${priorityTag}`;
       if (newTask.type === 'completed') {
-        replyMsg = `Awesome work, Aditya! Logged "${newTask.title}" as completed.`;
+        replyMsg = `✅ Completed: "${newTask.title}" | ⚡ ${priorityTag}`;
       }
 
-      addChatBubble(replyMsg, 'assistant', newTask);
+      addChatBubble(replyMsg, 'assistant');
       playChimeSound();
     } else {
       try {
@@ -240,7 +243,7 @@ async function handleAiSummary() {
   }
 }
 
-function addChatBubble(text, sender, parsedTask = null) {
+function addChatBubble(text, sender) {
   const chatHistory = document.getElementById('chat-feed') || document.getElementById('chat-history');
   if (!chatHistory) return;
 
@@ -255,17 +258,6 @@ function addChatBubble(text, sender, parsedTask = null) {
   const content = document.createElement('div');
   content.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   bubble.appendChild(content);
-
-  if (parsedTask) {
-    const card = document.createElement('div');
-    card.className = `parsed-card ${parsedTask.type}`;
-
-    card.innerHTML = `
-      <strong>Category:</strong> ${parsedTask.category} | <strong>Priority:</strong> ${(parsedTask.priority || 'medium').toUpperCase()}<br>
-      <span class="parsed-detail">Type: ${parsedTask.type === 'completed' ? '✅ Completed' : '⏰ Reminder'} Due: ${parsedTask.dueDate} ${parsedTask.dueTime || ''}</span>
-    `;
-    bubble.appendChild(card);
-  }
 
   chatHistory.appendChild(bubble);
   chatHistory.scrollTop = chatHistory.scrollHeight;
