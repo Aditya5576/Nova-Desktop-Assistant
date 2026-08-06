@@ -50,29 +50,12 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Clean Minimalist Windows Toast Notification with Dual-Layer Fallback (PowerShell + Electron Notification API)
+// Clean Minimalist Windows Toast Notification (Single Dispatch - No Double Banner)
 function sendWindowsToastNotification(title, body) {
   const safeTitle = title || 'Task Reminder';
   const safeBody = body || 'Reminder due now!';
 
-  // Layer 1: Electron Native OS Notification (Guaranteed Desktop Banner)
-  try {
-    if (Notification.isSupported()) {
-      const iconPath = path.join(__dirname, 'assets', 'icon.png');
-      const notif = new Notification({
-        title: safeTitle,
-        body: safeBody,
-        icon: fs.existsSync(iconPath) ? iconPath : undefined,
-        silent: false
-      });
-      notif.show();
-      logger.info(`Electron Native Notification dispatched: "${safeTitle}"`);
-    }
-  } catch (err) {
-    logger.error(`Electron Notification API error: ${err.message}`);
-  }
-
-  // Layer 2: PowerShell Toast Script (Rich Windows Toast with Sound)
+  // Single Reliable Windows Toast Script (PowerShell Toast with sound)
   try {
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
     const psTitle = safeTitle.replace(/"/g, '`"');
@@ -95,9 +78,7 @@ function sendIosPushNotification(title, body) {
   try {
     if (!db) return;
     const settings = db.getSettings();
-    if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) return;
-
-    const topic = settings.ntfyTopic.trim();
+    const topic = (settings.ntfyTopic && settings.ntfyTopic.trim()) ? settings.ntfyTopic.trim() : 'nova-my-tasks';
     const safeTitle = (title || 'Nova Task Reminder').replace(/[^\x00-\x7F]/g, '');
     const postData = body || 'Task reminder due now!';
 

@@ -227,7 +227,11 @@ class DatabaseService {
 
   getSettings() {
     const data = this.read();
-    return data.settings || {};
+    const settings = data.settings || {};
+    if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) {
+      settings.ntfyTopic = 'nova-my-tasks';
+    }
+    return settings;
   }
 
   updateSettings(newSettings) {

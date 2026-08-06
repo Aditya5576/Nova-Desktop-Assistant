@@ -45,8 +45,8 @@ try {
 
     $body = "Time: $timeStr | Priority: $priority"
 
-    $topic = ""
-    if ($json.settings -and $json.settings.ntfyTopic) {
+    $topic = "nova-my-tasks"
+    if ($json.settings -and $json.settings.ntfyTopic -and $json.settings.ntfyTopic.Trim()) {
         $topic = $json.settings.ntfyTopic.Trim()
     }
 
