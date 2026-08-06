@@ -1,6 +1,7 @@
 param (
     [string]$Title = "Task Reminder",
-    [string]$Body = "Reminder due now!"
+    [string]$Body = "Reminder due now!",
+    [string]$Topic = ""
 )
 
 try {
@@ -28,4 +29,14 @@ try {
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
     [System.Media.SystemSounds]::Exclamation.Play()
+}
+
+# Dispatch iPhone 15 Push Notification via ntfy.sh if Topic is provided
+if ($Topic -and $Topic.Trim()) {
+    try {
+        $safeTopic = $Topic.Trim()
+        $url = "https://ntfy.sh/$safeTopic"
+        $safeTitle = $Title -replace '[^\x00-\x7F]', ''
+        Invoke-RestMethod -Uri $url -Method Post -Body "$Body" -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell" } -ErrorAction SilentlyContinue
+    } catch {}
 }

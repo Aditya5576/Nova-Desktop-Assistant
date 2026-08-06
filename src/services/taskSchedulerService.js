@@ -9,10 +9,21 @@ const fs = require('fs');
 class TaskSchedulerService {
   constructor() {
     this.scriptsDir = path.join(__dirname, '../../scripts');
+    this.dbPath = path.join(__dirname, '../../myassist_tasks.json');
     if (!fs.existsSync(this.scriptsDir)) {
       fs.mkdirSync(this.scriptsDir, { recursive: true });
     }
     this.ensureNotifyScript();
+  }
+
+  getNtfyTopic() {
+    try {
+      if (fs.existsSync(this.dbPath)) {
+        const data = JSON.parse(fs.readFileSync(this.dbPath, 'utf-8'));
+        return (data.settings && data.settings.ntfyTopic) ? data.settings.ntfyTopic.trim() : '';
+      }
+    } catch (e) {}
+    return '';
   }
 
   ensureNotifyScript() {
@@ -20,7 +31,8 @@ class TaskSchedulerService {
       const notifyPs1 = path.join(this.scriptsDir, 'sendToast.ps1');
       const psContent = `param (
     [string]$Title = "Task Reminder",
-    [string]$Body = "Reminder due now!"
+    [string]$Body = "Reminder due now!",
+    [string]$Topic = ""
 )
 
 try {
@@ -48,6 +60,15 @@ try {
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
     [System.Media.SystemSounds]::Exclamation.Play()
+}
+
+if ($Topic -and $Topic.Trim()) {
+    try {
+        $safeTopic = $Topic.Trim()
+        $url = "https://ntfy.sh/$safeTopic"
+        $safeTitle = $Title -replace '[^\x00-\x7F]', ''
+        Invoke-RestMethod -Uri $url -Method Post -Body "$Body" -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell" } -ErrorAction SilentlyContinue
+    } catch {}
 }
 `;
       fs.writeFileSync(notifyPs1, psContent, 'utf-8');
@@ -79,8 +100,9 @@ try {
       const safeTitle = (task.title || 'Task Reminder').replace(/"/g, '`"');
       const priorityStr = (task.priority || 'medium').toUpperCase();
       const bodyDetails = `Priority: ${priorityStr}${task.recurring !== 'none' ? ` | Recurring: ${task.recurring}` : ''}`;
+      const ntfyTopic = this.getNtfyTopic();
       
-      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "${safeTitle}" -Body "${bodyDetails}"`;
+      const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Title "${safeTitle}" -Body "${bodyDetails}" -Topic "${ntfyTopic}"`;
 
       // Remove previous task if exists
       exec(`schtasks /Delete /TN "${taskName}" /F`, () => {

@@ -52,10 +52,14 @@ function playWindowsAudioChime() {
 // Clean Minimalist Windows Toast Notification (Clean Text, No Encoding Glitches)
 function sendWindowsToastNotification(title, body) {
   try {
+    if (!db) return;
+    const settings = db.getSettings();
+    const topic = (settings.ntfyTopic || '').trim();
+    
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
     const safeTitle = (title || 'Task Reminder').replace(/"/g, '`"');
     const safeBody = (body || 'Reminder due now!').replace(/"/g, '`"');
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}"`;
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic "${topic}"`;
     exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
@@ -70,6 +74,7 @@ function sendIosPushNotification(title, body) {
     if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) return;
 
     const topic = settings.ntfyTopic.trim();
+    const safeTitle = (title || 'Nova Task Reminder').replace(/[^\x00-\x7F]/g, '');
     const postData = body || 'Task reminder due now!';
 
     const options = {
@@ -78,7 +83,7 @@ function sendIosPushNotification(title, body) {
       path: `/${encodeURIComponent(topic)}`,
       method: 'POST',
       headers: {
-        'Title': title || '🔔 Nova Task Reminder',
+        'Title': safeTitle,
         'Priority': 'high',
         'Tags': 'bell,alarm_clock',
         'Content-Type': 'text/plain; charset=utf-8',
@@ -274,7 +279,7 @@ function startReminderChecker() {
 
           // 📱 Dispatch Free Instant Push Notification directly to iPhone 15
           sendIosPushNotification(
-            `🔔 ${task.title}`,
+            task.title,
             `Priority: ${priorityStr} | Due: ${task.dueTime}`
           );
         }
