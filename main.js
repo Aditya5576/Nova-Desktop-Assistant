@@ -108,12 +108,15 @@ function createWindow() {
   const settings = db.getSettings();
   gemini = new GeminiService(settings.geminiApiKey || '');
 
+  const iconPath = path.join(__dirname, 'assets', 'icon.ico');
+
   mainWindow = new BrowserWindow({
     width: 580,
     height: 620,
     minWidth: 420,
     minHeight: 360,
     title: 'Nova - Desktop Task Assistant',
+    icon: iconPath,
     backgroundColor: '#0f172a',
     show: false,
     frame: true,
