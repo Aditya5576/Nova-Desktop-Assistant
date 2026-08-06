@@ -101,17 +101,19 @@ function initEventListeners() {
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', async () => {
       const apiKey = document.getElementById('setting-gemini-key').value.trim();
+      const iosTopic = document.getElementById('setting-ios-topic').value.trim();
       const soundEnabled = document.getElementById('setting-sound').checked;
       const notifEnabled = document.getElementById('setting-notif').checked;
 
       const updated = await window.myassist.updateSettings({
         geminiApiKey: apiKey,
+        ntfyTopic: iosTopic,
         soundEnabled,
         notificationsEnabled: notifEnabled
       });
 
       settings = updated || {};
-      showToast('Settings & API key saved successfully! 🔑', 'success');
+      showToast('Settings saved successfully! 🔑', 'success');
       loadSettings();
     });
   }
@@ -141,10 +143,12 @@ function initEventListeners() {
 async function loadSettings() {
   settings = await window.myassist.getSettings();
   const apiKeyEl = document.getElementById('setting-gemini-key');
+  const iosTopicEl = document.getElementById('setting-ios-topic');
   const soundEl = document.getElementById('setting-sound');
   const notifEl = document.getElementById('setting-notif');
 
   if (apiKeyEl) apiKeyEl.value = settings.geminiApiKey || '';
+  if (iosTopicEl) iosTopicEl.value = settings.ntfyTopic || '';
   if (soundEl) soundEl.checked = settings.soundEnabled !== false;
   if (notifEl) notifEl.checked = settings.notificationsEnabled !== false;
 }

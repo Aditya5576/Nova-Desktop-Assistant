@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { exec } = require('child_process');
 const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
@@ -58,6 +59,45 @@ function sendWindowsToastNotification(title, body) {
     exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
+  }
+}
+
+// 📱 Free iOS iPhone 15 Instant Push Notification Engine (via ntfy.sh)
+function sendIosPushNotification(title, body) {
+  try {
+    if (!db) return;
+    const settings = db.getSettings();
+    if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) return;
+
+    const topic = settings.ntfyTopic.trim();
+    const postData = body || 'Task reminder due now!';
+
+    const options = {
+      hostname: 'ntfy.sh',
+      port: 443,
+      path: `/${encodeURIComponent(topic)}`,
+      method: 'POST',
+      headers: {
+        'Title': title || '🔔 Nova Task Reminder',
+        'Priority': 'high',
+        'Tags': 'bell,alarm_clock',
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      console.log(`iOS Push Notification dispatched to ntfy.sh/${topic} (Status: ${res.statusCode})`);
+    });
+
+    req.on('error', (e) => {
+      console.error('iOS push notification failed:', e.message);
+    });
+
+    req.write(postData);
+    req.end();
+  } catch (err) {
+    console.error('Error sending iOS push notification:', err);
   }
 }
 
@@ -231,6 +271,12 @@ function startReminderChecker() {
             task.title,
             bodyMsg
           );
+
+          // 📱 Dispatch Free Instant Push Notification directly to iPhone 15
+          sendIosPushNotification(
+            `🔔 ${task.title}`,
+            `Priority: ${priorityStr} | Due: ${task.dueTime}`
+          );
         }
       }
     });
@@ -274,6 +320,7 @@ ipcMain.on('toggle-widget-mode', (event, isWidget) => setWidgetDimensions(isWidg
 
 ipcMain.on('show-notification', (event, { title, body }) => {
   sendWindowsToastNotification(title, body);
+  sendIosPushNotification(title, body);
 });
 
 app.whenReady().then(() => {

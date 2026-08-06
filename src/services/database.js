@@ -16,7 +16,7 @@ class DatabaseService {
           tasks: [
             {
               id: 'init-1',
-              title: 'Welcome to MyAssist! Desktop Task Assistant is ready.',
+              title: 'Welcome to Nova! Desktop Task Assistant is ready.',
               type: 'scheduled',
               status: 'pending',
               category: 'General',
@@ -35,7 +35,8 @@ class DatabaseService {
             theme: 'dark',
             soundEnabled: true,
             notificationsEnabled: true,
-            geminiApiKey: ''
+            geminiApiKey: '',
+            ntfyTopic: ''
           }
         };
         fs.writeFileSync(this.dbPath, JSON.stringify(initialData, null, 2), 'utf-8');
