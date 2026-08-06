@@ -6,6 +6,7 @@ const { exec } = require('child_process');
 const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
+const logger = require('./src/services/logger');
 
 // Register Windows App User Model ID for native instant Windows OS Notifications
 const APP_USER_MODEL_ID = 'com.nova.desktop';
@@ -49,17 +50,43 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Clean Minimalist Windows Toast Notification (Topic disabled here to prevent duplicate iPhone push)
+// Clean Minimalist Windows Toast Notification with Dual-Layer Fallback (PowerShell + Electron Notification API)
 function sendWindowsToastNotification(title, body) {
+  const safeTitle = title || 'Task Reminder';
+  const safeBody = body || 'Reminder due now!';
+
+  // Layer 1: Electron Native OS Notification (Guaranteed Desktop Banner)
+  try {
+    if (Notification.isSupported()) {
+      const iconPath = path.join(__dirname, 'assets', 'icon.png');
+      const notif = new Notification({
+        title: safeTitle,
+        body: safeBody,
+        icon: fs.existsSync(iconPath) ? iconPath : undefined,
+        silent: false
+      });
+      notif.show();
+      logger.info(`Electron Native Notification dispatched: "${safeTitle}"`);
+    }
+  } catch (err) {
+    logger.error(`Electron Notification API error: ${err.message}`);
+  }
+
+  // Layer 2: PowerShell Toast Script (Rich Windows Toast with Sound)
   try {
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
-    const safeTitle = (title || 'Task Reminder').replace(/"/g, '`"');
-    const safeBody = (body || 'Reminder due now!').replace(/"/g, '`"');
-    // Pass "none" as Topic so sendToast.ps1 shows toast but does NOT duplicate the ntfy push (handled by main.js separately)
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic "none"`;
-    exec(cmd, () => {});
+    const psTitle = safeTitle.replace(/"/g, '`"');
+    const psBody = safeBody.replace(/"/g, '`"');
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${psTitle}" -Body "${psBody}" -Topic "none"`;
+    exec(cmd, (err) => {
+      if (err) {
+        logger.warn(`PowerShell Toast command exited with notice: ${err.message}`);
+      } else {
+        logger.info(`PowerShell Toast dispatched successfully for "${safeTitle}"`);
+      }
+    });
   } catch (err) {
-    console.error('Failed to trigger native toast notification:', err);
+    logger.error(`Failed to trigger PowerShell toast script: ${err.message}`);
   }
 }
 
