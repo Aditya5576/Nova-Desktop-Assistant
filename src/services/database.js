@@ -41,6 +41,7 @@ class DatabaseService {
         };
         fs.writeFileSync(this.dbPath, JSON.stringify(initialData, null, 2), 'utf-8');
       }
+      this.scheduler.syncAllPendingTasks(this.getTasks());
     } catch (err) {
       console.error('Failed to initialize database file:', err);
     }
