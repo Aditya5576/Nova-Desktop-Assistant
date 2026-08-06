@@ -297,18 +297,16 @@ function startReminderChecker() {
 
           // Trigger Clean Windows Native Desktop Notification
           const priorityStr = (task.priority || 'medium').toUpperCase();
-          const bodyMsg = `Priority: ${priorityStr}${task.recurring !== 'none' ? ` | Recurring: ${task.recurring}` : ''}`;
+          const categoryStr = task.category || 'General';
+          const timeStr = task.dueTime ? task.dueTime.substring(0, 5) : '';
+
+          const notifTitle = `🔔 ${task.title}`;
+          const notifBody = `🕒 ${timeStr} | ⚡ Priority: ${priorityStr} | 📁 ${categoryStr}`;
           
-          sendWindowsToastNotification(
-            task.title,
-            bodyMsg
-          );
+          sendWindowsToastNotification(notifTitle, notifBody);
 
           // 📱 Dispatch Single Free Instant Push Notification directly to iPhone 15
-          sendIosPushNotification(
-            task.title,
-            `Priority: ${priorityStr} | Due: ${task.dueTime}`
-          );
+          sendIosPushNotification(notifTitle, notifBody);
         }
       }
     });

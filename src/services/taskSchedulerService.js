@@ -39,12 +39,12 @@ try {
         exit
     }
 
-    $title = if ($task.title) { $task.title } else { "Task Reminder" }
+    $title = if ($task.title) { "🔔 $($task.title)" } else { "🔔 Task Reminder" }
     $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
-    $body = "Priority: $priority"
-    if ($task.recurring -and $task.recurring -ne "none") {
-        $body += " | Recurring: $($task.recurring)"
-    }
+    $category = if ($task.category) { $task.category } else { "General" }
+    $timeStr = if ($task.dueTime) { $task.dueTime.ToString().Substring(0, 5) } else { "" }
+
+    $body = "🕒 $timeStr | ⚡ Priority: $priority | 📁 $category"
 
     $topic = ""
     if ($json.settings -and $json.settings.ntfyTopic) {
