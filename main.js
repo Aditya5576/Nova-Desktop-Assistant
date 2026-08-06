@@ -297,11 +297,10 @@ function startReminderChecker() {
 
           // Trigger Clean Windows Native Desktop Notification
           const priorityStr = (task.priority || 'medium').toUpperCase();
-          const categoryStr = task.category || 'General';
           const timeStr = task.dueTime ? task.dueTime.substring(0, 5) : '';
 
-          const notifTitle = `🔔 ${task.title}`;
-          const notifBody = `🕒 ${timeStr} | ⚡ Priority: ${priorityStr} | 📁 ${categoryStr}`;
+          const notifTitle = task.title || 'Task Reminder';
+          const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
           
           sendWindowsToastNotification(notifTitle, notifBody);
 
