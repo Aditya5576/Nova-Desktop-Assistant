@@ -133,6 +133,22 @@ function initEventListeners() {
     });
   }
 
+  const toggleKeyBtn = document.getElementById('toggle-key-visibility');
+  if (toggleKeyBtn) {
+    toggleKeyBtn.addEventListener('click', () => {
+      const apiKeyInput = document.getElementById('setting-gemini-key');
+      if (apiKeyInput) {
+        if (apiKeyInput.type === 'password') {
+          apiKeyInput.type = 'text';
+          toggleKeyBtn.textContent = '🔒';
+        } else {
+          apiKeyInput.type = 'password';
+          toggleKeyBtn.textContent = '👁️';
+        }
+      }
+    });
+  }
+
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', async () => {
       const apiKey = document.getElementById('setting-gemini-key').value.trim();
@@ -181,11 +197,24 @@ async function loadSettings() {
   const iosTopicEl = document.getElementById('setting-ios-topic');
   const soundEl = document.getElementById('setting-sound');
   const notifEl = document.getElementById('setting-notif');
+  const keyStatusEl = document.getElementById('gemini-key-status');
 
   if (apiKeyEl) apiKeyEl.value = settings.geminiApiKey || '';
   if (iosTopicEl) iosTopicEl.value = settings.ntfyTopic || '';
   if (soundEl) soundEl.checked = settings.soundEnabled !== false;
   if (notifEl) notifEl.checked = settings.notificationsEnabled !== false;
+
+  if (keyStatusEl) {
+    if (settings.geminiApiKey && settings.geminiApiKey.trim()) {
+      keyStatusEl.textContent = 'Configured ✅';
+      keyStatusEl.style.background = 'rgba(16, 185, 129, 0.2)';
+      keyStatusEl.style.color = '#34d399';
+    } else {
+      keyStatusEl.textContent = 'Key Missing ⚠️';
+      keyStatusEl.style.background = 'rgba(244, 63, 94, 0.2)';
+      keyStatusEl.style.color = '#fb7185';
+    }
+  }
 }
 
 async function loadTasks() {
