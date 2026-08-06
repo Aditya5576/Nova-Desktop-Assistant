@@ -138,10 +138,10 @@ function createWindow() {
   const iconPath = path.join(__dirname, 'assets', 'icon.ico');
 
   mainWindow = new BrowserWindow({
-    width: 580,
-    height: 620,
-    minWidth: 420,
-    minHeight: 360,
+    width: 460,
+    height: 550,
+    minWidth: 380,
+    minHeight: 460,
     title: 'Nova - Desktop Task Assistant',
     icon: iconPath,
     backgroundColor: '#0f172a',
@@ -251,10 +251,10 @@ function setWidgetDimensions(enableWidget) {
   isWidgetMode = enableWidget;
 
   if (isWidgetMode) {
-    mainWindow.setSize(480, 280);
+    mainWindow.setSize(440, 260);
     mainWindow.setAlwaysOnTop(true);
   } else {
-    mainWindow.setSize(580, 620);
+    mainWindow.setSize(460, 550);
     mainWindow.setAlwaysOnTop(false);
   }
   mainWindow.webContents.send('widget-mode-changed', isWidgetMode);
