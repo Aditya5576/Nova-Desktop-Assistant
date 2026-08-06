@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
   if (feed && feed.children.length === 0) {
-    addChatBubble("Hello Aditya (Boss)! 🤖 I'm Nova, your personal task assistant. Tell me what tasks you need to schedule or what you've finished today, or ask me anything!", 'assistant');
+    addChatBubble("Hello Aditya! 🤖 I'm Nova, your personal task assistant. Tell me what tasks you need to schedule or what you've finished today, or ask me anything!", 'assistant');
   }
 
   window.myassist.onWidgetModeChanged((isWidget) => {
@@ -102,9 +102,9 @@ function initEventListeners() {
 
   if (clearAllBtn) {
     clearAllBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear ALL pending & scheduled tasks, Boss?')) {
+      if (confirm('Are you sure you want to clear ALL pending & scheduled tasks, Aditya?')) {
         await window.myassist.clearAllTasks();
-        showToast('All tasks cleared successfully, Boss 🗑️', 'info');
+        showToast('All tasks cleared successfully 🗑️', 'info');
         loadTasks();
       }
     });
@@ -112,9 +112,9 @@ function initEventListeners() {
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear task history, Boss?')) {
+      if (confirm('Are you sure you want to clear task history, Aditya?')) {
         await window.myassist.clearAllTasks();
-        showToast('Completed log cleared, Boss 🗑️', 'info');
+        showToast('Completed log cleared 🗑️', 'info');
         loadTasks();
       }
     });
@@ -135,7 +135,7 @@ function initEventListeners() {
       });
 
       settings = updated || {};
-      showToast('Settings saved successfully, Boss! 🔑', 'success');
+      showToast('Settings saved successfully! 🔑', 'success');
       loadSettings();
     });
   }
@@ -208,9 +208,9 @@ async function handleUserSubmit() {
       const newTask = await window.myassist.addTask(parsed);
       await loadTasks();
 
-      let replyMsg = `Right away, Boss! Scheduled for **${newTask.dueDate}** at **${newTask.dueTime}**: "${newTask.title}".`;
+      let replyMsg = `Right away, Aditya! Scheduled for **${newTask.dueDate}** at **${newTask.dueTime}**: "${newTask.title}".`;
       if (newTask.type === 'completed') {
-        replyMsg = `Awesome work, Boss! Logged "${newTask.title}" as completed.`;
+        replyMsg = `Awesome work, Aditya! Logged "${newTask.title}" as completed.`;
       }
 
       addChatBubble(replyMsg, 'assistant', newTask);
@@ -220,7 +220,7 @@ async function handleUserSubmit() {
         const response = await window.myassist.geminiChat(inputStr);
         addChatBubble(response, 'assistant');
       } catch (err) {
-        addChatBubble("I'm here for you, Boss! Ask me anything or tell me a task to schedule.", 'assistant');
+        addChatBubble("I'm here for you, Aditya! Ask me anything or tell me a task to schedule.", 'assistant');
       }
     }
   } catch (e) {
@@ -231,7 +231,7 @@ async function handleUserSubmit() {
 }
 
 async function handleAiSummary() {
-  addChatBubble("✨ Generating your daily productivity summary, Boss...", 'assistant');
+  addChatBubble("✨ Generating your daily productivity summary, Aditya...", 'assistant');
   try {
     const summary = await window.myassist.geminiSummary();
     addChatBubble(summary, 'assistant');

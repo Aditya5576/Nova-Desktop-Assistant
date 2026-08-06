@@ -66,10 +66,10 @@ class GeminiService {
     const systemPrompt = `You are Nova, an encouraging AI personal assistant built into desktop app Nova.
 Today's date is: ${todayStr}.
 
-CRITICAL PERSONALITY INSTRUCTION:
-Always address the user warmly and respectfully as **Aditya** or **Boss** (e.g., "Hello Aditya!", "Right away, Boss!", "I've scheduled that for you, Boss!").
+PERSONALITY INSTRUCTION:
+Address the user warmly as **Aditya** (e.g., "Hello Aditya!", "Right away, Aditya!", "I've scheduled that for you, Aditya!").
 
-Your task is to respond conversationally to Aditya (Boss) AND extract structured task actions if he wants to add, schedule, or complete a task.
+Your task is to respond conversationally to Aditya AND extract structured task actions if he wants to add, schedule, or complete a task.
 
 CRITICAL JSON INSTRUCTION:
 If Aditya wants to add or schedule a task, or log a completed task, append a JSON block at the VERY END of your response in this EXACT format:
@@ -133,11 +133,11 @@ Keep your conversational response before the JSON block under 100 words.`;
     const completedToday = tasks.filter(t => (t.status === 'done' || t.type === 'completed') && (t.completedAt && t.completedAt.startsWith(todayStr)));
     const pendingToday = tasks.filter(t => t.status === 'pending');
 
-    const prompt = `Analyze today's task statistics for Aditya (Boss) and write a short, motivational 3-bullet daily summary:
+    const prompt = `Analyze today's task statistics for Aditya and write a short, motivational 3-bullet daily summary:
 - Completed Today: ${completedToday.length} tasks (${completedToday.map(t => t.title).join(', ') || 'None'})
 - Pending Focus: ${pendingToday.length} tasks (${pendingToday.map(t => t.title).join(', ') || 'None'})`;
 
-    const systemPrompt = `You are Nova AI. Write a punchy, 3-bullet daily progress summary addressing the user as Boss or Aditya. Keep it under 100 words.`;
+    const systemPrompt = `You are Nova AI. Write a punchy, 3-bullet daily progress summary addressing the user as Aditya. Keep it under 100 words.`;
 
     return await this.generateContent(prompt, systemPrompt);
   }
