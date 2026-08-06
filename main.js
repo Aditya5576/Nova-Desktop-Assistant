@@ -49,17 +49,14 @@ function playWindowsAudioChime() {
   exec(cmd, () => {});
 }
 
-// Clean Minimalist Windows Toast Notification (Clean Text, No Encoding Glitches)
+// Clean Minimalist Windows Toast Notification (Topic disabled here to prevent duplicate iPhone push)
 function sendWindowsToastNotification(title, body) {
   try {
-    if (!db) return;
-    const settings = db.getSettings();
-    const topic = (settings.ntfyTopic || '').trim();
-    
     const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
     const safeTitle = (title || 'Task Reminder').replace(/"/g, '`"');
     const safeBody = (body || 'Reminder due now!').replace(/"/g, '`"');
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic "${topic}"`;
+    // Pass empty Topic so sendToast.ps1 does not duplicate the ntfy push already handled by main.js
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${safeTitle}" -Body "${safeBody}" -Topic ""`;
     exec(cmd, () => {});
   } catch (err) {
     console.error('Failed to trigger native toast notification:', err);
@@ -277,7 +274,7 @@ function startReminderChecker() {
             bodyMsg
           );
 
-          // 📱 Dispatch Free Instant Push Notification directly to iPhone 15
+          // 📱 Dispatch Single Free Instant Push Notification directly to iPhone 15
           sendIosPushNotification(
             task.title,
             `Priority: ${priorityStr} | Due: ${task.dueTime}`
