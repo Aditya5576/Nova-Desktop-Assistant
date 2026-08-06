@@ -34,7 +34,10 @@ try {
     $json = Get-Content $dbPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $task = $json.tasks | Where-Object { $_.id -eq $Id }
 
-    if (-not $task) { exit }
+    # Strict Deduplication Guard: Exit if task does not exist, is marked done, or is ALREADY notified
+    if (-not $task -or $task.notified -eq $true -or $task.status -eq "done") {
+        exit
+    }
 
     $title = if ($task.title) { $task.title } else { "Task Reminder" }
     $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
