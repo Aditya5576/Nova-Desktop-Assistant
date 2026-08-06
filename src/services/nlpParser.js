@@ -166,20 +166,49 @@ function parseTaskInput(inputStr) {
       }
     }
 
-    const timeMatch = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-    if (timeMatch && (timeMatch[3] || lower.includes('at ' + timeMatch[1]))) {
+    const timeMatch = lower.match(/(?:at\s+)?(\d{1,2})[:.](\d{2})\s*(am|pm)?/i) || 
+                      lower.match(/(?:at\s+)(\d{1,2})\s*(am|pm)?/i);
+
+    if (timeMatch) {
       let hours = parseInt(timeMatch[1], 10);
-      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      const meridiem = timeMatch[3] ? timeMatch[3].toLowerCase() : null;
+      const minutes = timeMatch[2] && !isNaN(parseInt(timeMatch[2], 10)) ? parseInt(timeMatch[2], 10) : 0;
+      const meridiem = (timeMatch[3] || timeMatch[2] === 'am' || timeMatch[2] === 'pm') ? (timeMatch[3] || timeMatch[2]).toLowerCase() : null;
 
       if (meridiem === 'pm' && hours < 12) hours += 12;
       if (meridiem === 'am' && hours === 12) hours = 0;
+
+      // Smart 12-Hour Fallback when no AM/PM is explicitly typed
+      if (!meridiem) {
+        const curHours = now.getHours();
+        if (hours < 12) {
+          const pmHours = hours + 12;
+          const candidatePmDate = new Date(targetDate.getTime());
+          candidatePmDate.setHours(pmHours, minutes, 0, 0);
+
+          const candidateAmDate = new Date(targetDate.getTime());
+          candidateAmDate.setHours(hours, minutes, 0, 0);
+
+          // If PM time (e.g. 5:30 PM = 17:30) is in the future today, default to PM!
+          if (candidatePmDate >= now && curHours >= 6) {
+            hours = pmHours;
+          } else if (candidateAmDate < now && candidatePmDate < now && !lower.includes('today')) {
+            // Both AM and PM are in the past for today -> advance target date to tomorrow!
+            targetDate.setDate(targetDate.getDate() + 1);
+            if (curHours >= 12) hours = pmHours;
+          }
+        }
+      }
+
+      targetDate.setHours(hours, minutes, 0, 0);
 
       const formattedH = String(hours).padStart(2, '0');
       const formattedM = String(minutes).padStart(2, '0');
       dueTime = `${formattedH}:${formattedM}:00`;
 
-      title = title.replace(/(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '').trim();
+      // Clean matched time from title string
+      title = title.replace(/(?:at\s+)?\d{1,2}[:.]\d{2}\s*(?:am|pm)?/gi, '')
+                   .replace(/(?:at\s+)\d{1,2}\s*(?:am|pm)?/gi, '')
+                   .replace(/^[\s\-:]+/, '').trim();
     } else if (lower.includes('morning')) {
       dueTime = '09:00:00';
       title = title.replace(/(in the |this )?morning/gi, '').trim();
