@@ -128,9 +128,13 @@ class DatabaseService {
         this.createNextRecurringTask(task);
       }
 
-      if (data.tasks[index].status === 'pending' && data.tasks[index].reminder) {
+      if (data.tasks[index].status === 'pending' && data.tasks[index].reminder && !data.tasks[index].notified) {
         try {
           this.scheduler.scheduleTask(data.tasks[index]);
+        } catch (e) {}
+      } else if (data.tasks[index].notified) {
+        try {
+          this.scheduler.removeTask(id);
         } catch (e) {}
       }
 
