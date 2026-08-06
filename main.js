@@ -239,6 +239,15 @@ function setWidgetDimensions(enableWidget) {
     mainWindow.setAlwaysOnTop(false);
   }
   mainWindow.webContents.send('widget-mode-changed', isWidgetMode);
+function formatTime12Hour(timeStr) {
+  if (!timeStr) return '';
+  const parts = String(timeStr).split(':');
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1].padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${ampm}`;
 }
 
 function startReminderChecker() {
@@ -278,7 +287,7 @@ function startReminderChecker() {
 
           // Trigger Clean Windows Native Desktop Notification
           const priorityStr = (task.priority || 'medium').toUpperCase();
-          const timeStr = task.dueTime ? task.dueTime.substring(0, 5) : '';
+          const timeStr = task.dueTime ? formatTime12Hour(task.dueTime) : '';
 
           const notifTitle = task.title || 'Task Reminder';
           const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;

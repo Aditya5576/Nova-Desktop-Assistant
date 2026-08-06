@@ -54,9 +54,11 @@ function initTimeWidget() {
     const dateEl = document.getElementById('clock-date');
 
     if (timeEl) {
-      const h = String(now.getHours()).padStart(2, '0');
+      let hours = now.getHours();
       const m = String(now.getMinutes()).padStart(2, '0');
-      timeEl.textContent = `${h}:${m}`;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      timeEl.textContent = `${hours}:${m} ${ampm}`;
     }
 
     if (dateEl) {
@@ -67,6 +69,17 @@ function initTimeWidget() {
 
   updateClock();
   setInterval(updateClock, 1000);
+}
+
+function formatTime12Hour(timeStr) {
+  if (!timeStr) return '';
+  const parts = String(timeStr).split(':');
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1].padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${ampm}`;
 }
 
 function initEventListeners() {
@@ -208,7 +221,7 @@ async function handleUserSubmit() {
       const newTask = await window.myassist.addTask(parsed);
       await loadTasks();
 
-      const displayTime = newTask.dueTime ? newTask.dueTime.substring(0, 5) : newTask.dueDate;
+      const displayTime = newTask.dueTime ? formatTime12Hour(newTask.dueTime) : newTask.dueDate;
       const priorityTag = (newTask.priority || 'medium').toUpperCase();
 
       let replyMsg = `Scheduled: "${newTask.title}" | 🕒 ${displayTime} | ⚡ ${priorityTag}`;
@@ -314,7 +327,7 @@ function renderTaskGroup(container, taskGroup, emptyMsg) {
         <div class="task-meta">
           <span class="category-tag">${task.category}</span>
           <span class="priority-tag priority-${task.priority}">${(task.priority || 'medium').toUpperCase()}</span>
-          ${task.dueTime ? `<span>🕒 ${task.dueTime}</span>` : ''}
+          ${task.dueTime ? `<span>${formatTime12Hour(task.dueTime)}</span>` : ''}
           ${task.recurring !== 'none' ? `<span class="recurring-tag">🔄 ${task.recurring}</span>` : ''}
         </div>
       </div>

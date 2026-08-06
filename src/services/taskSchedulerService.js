@@ -41,7 +41,17 @@ try {
 
     $title = if ($task.title) { $task.title } else { "Task Reminder" }
     $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
-    $timeStr = if ($task.dueTime) { $task.dueTime.ToString().Substring(0, 5) } else { "" }
+    $timeStr = ""
+    if ($task.dueTime) {
+        $tParts = $task.dueTime.ToString().Split(':')
+        if ($tParts.Length -ge 2) {
+            $h = [int]$tParts[0]
+            $m = $tParts[1]
+            $ampm = if ($h -ge 12) { "PM" } else { "AM" }
+            $h12 = if ($h % 12 -eq 0) { 12 } else { $h % 12 }
+            $timeStr = "$h12:$m $ampm"
+        }
+    }
 
     $body = "Time: $timeStr | Priority: $priority"
 
