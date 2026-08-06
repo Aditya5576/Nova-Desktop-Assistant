@@ -24,8 +24,8 @@
   --border-light: rgba(255, 255, 255, 0.08);
   --border-glow: rgba(99, 102, 241, 0.35);
 
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-body: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
   
   --radius-sm: 8px;
@@ -37,11 +37,12 @@
   --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-* {
+*, button, input, textarea, select {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   user-select: none;
+  font-family: var(--font-body) !important;
 }
 
 body {
