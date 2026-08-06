@@ -239,6 +239,8 @@ function setWidgetDimensions(enableWidget) {
     mainWindow.setAlwaysOnTop(false);
   }
   mainWindow.webContents.send('widget-mode-changed', isWidgetMode);
+}
+
 function formatTime12Hour(timeStr) {
   if (!timeStr) return '';
   const parts = String(timeStr).split(':');
