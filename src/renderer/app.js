@@ -315,6 +315,29 @@ function addChatBubble(text, sender) {
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
+function sortTasksInSequence(taskList) {
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+
+  return taskList.sort((a, b) => {
+    // 1. Primary Sort: Chronological Scheduled Time (e.g. 09:00 AM -> 11:30 AM -> 04:30 PM)
+    const timeA = a.dueTime || '99:99:99';
+    const timeB = b.dueTime || '99:99:99';
+    if (timeA !== timeB) {
+      return timeA.localeCompare(timeB);
+    }
+
+    // 2. Secondary Sort: Priority Level (HIGH > MEDIUM > LOW)
+    const weightA = priorityWeight[a.priority] || 2;
+    const weightB = priorityWeight[b.priority] || 2;
+    if (weightA !== weightB) {
+      return weightB - weightA;
+    }
+
+    // 3. Tertiary Sort: Creation ID / Timestamp
+    return (a.id || '').localeCompare(b.id || '');
+  });
+}
+
 function renderTodayTomorrow() {
   const todayList = document.getElementById('today-task-list');
   const tomorrowList = document.getElementById('tomorrow-task-list');
@@ -328,11 +351,11 @@ function renderTodayTomorrow() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
-  const todayTasks = tasks.filter(t => t.status === 'pending' && t.dueDate <= todayStr)
-                          .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+  const rawToday = tasks.filter(t => t.status === 'pending' && t.dueDate <= todayStr);
+  const rawTomorrow = tasks.filter(t => t.status === 'pending' && t.dueDate === tomorrowStr);
 
-  const tomorrowTasks = tasks.filter(t => t.status === 'pending' && t.dueDate === tomorrowStr)
-                             .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+  const todayTasks = sortTasksInSequence(rawToday);
+  const tomorrowTasks = sortTasksInSequence(rawTomorrow);
 
   // Update Badges
   const todayCountEl = document.getElementById('today-count');
