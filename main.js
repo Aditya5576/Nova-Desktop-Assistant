@@ -169,16 +169,33 @@ function createWindow() {
     ntfySubscriber = new NtfySubscriber(activeTopic);
     ntfySubscriber.on('task-received', async ({ text }) => {
       try {
-        const parsed = parseTaskInput(text);
-        if (parsed) {
-          const newTask = db.addTask(parsed);
-          logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
-          
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('task-added-from-iphone', newTask);
-          }
-          playWindowsAudioChime();
+        if (!text || text === 'triggered' || text === 'OK' || text.length < 2) return;
+
+        let parsed = parseTaskInput(text);
+        if (!parsed) {
+          const now = new Date();
+          const defaultFuture = new Date(now.getTime() + 3600000);
+          parsed = {
+            title: text,
+            type: 'scheduled',
+            status: 'pending',
+            category: 'General',
+            priority: 'medium',
+            recurring: 'none',
+            dueDate: getLocalDateString(defaultFuture),
+            dueTime: getLocalTimeStringSec(defaultFuture),
+            reminder: true,
+            notified: false
+          };
         }
+
+        const newTask = db.addTask(parsed);
+        logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
+        
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('task-added-from-iphone', newTask);
+        }
+        playWindowsAudioChime();
       } catch (err) {
         logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
       }
