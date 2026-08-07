@@ -22,6 +22,9 @@ const apiBridge = {
   },
   onGlobalHotkeyTrigger: (callback) => {
     ipcRenderer.on('global-hotkey-toggle', () => callback());
+  },
+  onTaskAddedFromIphone: (callback) => {
+    ipcRenderer.on('task-added-from-iphone', (event, task) => callback(task));
   }
 };
 

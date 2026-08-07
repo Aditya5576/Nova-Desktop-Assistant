@@ -23,6 +23,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(`🔔 REMINDER DUE: ${task.title}`, 'info');
     loadTasks();
   });
+
+  if (window.myassist.onTaskAddedFromIphone) {
+    window.myassist.onTaskAddedFromIphone((task) => {
+      const displayTime = task.dueTime ? formatTime12Hour(task.dueTime) : task.dueDate;
+      const priorityTag = (task.priority || 'medium').toUpperCase();
+      showToast(`📱 Task received from iPhone: "${task.title}"`, 'success');
+      addChatBubble(`📱 Task added from iPhone: "${task.title}" | 🕒 ${displayTime} | ⚡ ${priorityTag}`, 'assistant');
+      loadTasks();
+    });
+  }
 });
 
 function initTabs() {

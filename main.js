@@ -7,6 +7,7 @@ const DatabaseService = require('./src/services/database');
 const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
 const logger = require('./src/services/logger');
+const NtfySubscriber = require('./src/services/ntfySubscriber');
 
 // Register Windows App User Model ID for native instant Windows OS Notifications
 const APP_USER_MODEL_ID = 'com.nova.desktop';
@@ -42,6 +43,7 @@ let mainWindow;
 let tray;
 let db;
 let gemini;
+let ntfySubscriber;
 let reminderInterval;
 let isWidgetMode = false;
 
@@ -158,6 +160,33 @@ function createWindow() {
 
   createSystemTray();
   startReminderChecker();
+
+  // Initialize Real-Time iPhone Task Subscriber Engine
+  const currentSettings = db.getSettings();
+  const activeTopic = (currentSettings && currentSettings.ntfyTopic) ? currentSettings.ntfyTopic : 'nova-my-tasks';
+  
+  if (!ntfySubscriber) {
+    ntfySubscriber = new NtfySubscriber(activeTopic);
+    ntfySubscriber.on('task-received', async ({ text }) => {
+      try {
+        const parsed = parseTaskInput(text);
+        if (parsed) {
+          const newTask = db.addTask(parsed);
+          logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
+          
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('task-added-from-iphone', newTask);
+          }
+          playWindowsAudioChime();
+        }
+      } catch (err) {
+        logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
+      }
+    });
+    ntfySubscriber.start();
+  } else {
+    ntfySubscriber.setTopic(activeTopic);
+  }
 }
 
 function toggleWindowVisibility() {
@@ -324,6 +353,9 @@ ipcMain.handle('get-settings', () => db.getSettings());
 ipcMain.handle('update-settings', (event, settings) => {
   if (settings.geminiApiKey !== undefined) {
     gemini.setApiKey(settings.geminiApiKey);
+  }
+  if (settings.ntfyTopic !== undefined && ntfySubscriber) {
+    ntfySubscriber.setTopic(settings.ntfyTopic);
   }
   return db.updateSettings(settings);
 });
