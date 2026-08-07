@@ -29,7 +29,7 @@ class NtfySubscriber extends EventEmitter {
     if (this.isListening || !this.topic || this.topic === 'none') return;
 
     try {
-      const url = `https://ntfy.sh/${encodeURIComponent(this.topic)}/json`;
+      const url = `https://ntfy.sh/${encodeURIComponent(this.topic)}/json?since=10m`;
       logger.info(`[iPhone Sync] Connecting real-time task listener to ${url}...`);
 
       this.req = https.get(url, (res) => {
