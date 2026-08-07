@@ -3,12 +3,16 @@ let tasks = [];
 let settings = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
-  initPowderCanvas();
   initTabs();
   initTimeWidget();
   initEventListeners();
   await loadSettings();
   await loadTasks();
+
+  const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
+  if (feed && feed.children.length === 0) {
+    addChatBubble("Hello Aditya! 🤖 I'm Nova, your personal task assistant. Tell me what tasks you need to schedule or what you've finished today, or ask me anything!", 'assistant');
+  }
 
   window.myassist.onWidgetModeChanged((isWidget) => {
     document.body.classList.toggle('widget-mode', isWidget);
@@ -53,86 +57,23 @@ function initTabs() {
   });
 }
 
-function initPowderCanvas() {
-  const canvas = document.getElementById('powder-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight;
-
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-  });
-
-  const particleCount = 45;
-  const particles = [];
-
-  for (let i = 0; i < particleCount; i++) {
-    particles.push({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      radius: Math.random() * 1.8 + 0.6,
-      color: Math.random() > 0.4 ? 'rgba(16, 185, 129, ' : (Math.random() > 0.5 ? 'rgba(52, 211, 153, ' : 'rgba(6, 182, 212, '),
-      opacity: Math.random() * 0.35 + 0.1,
-      speedY: Math.random() * 0.4 + 0.15,
-      speedX: Math.random() * 0.3 - 0.15,
-      swingAngle: Math.random() * Math.PI * 2,
-      swingSpeed: Math.random() * 0.02 + 0.005
-    });
-  }
-
-  function animate() {
-    ctx.clearRect(0, 0, width, height);
-
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      p.swingAngle += p.swingSpeed;
-      p.y -= p.speedY;
-      p.x += Math.sin(p.swingAngle) * 0.3 + p.speedX;
-
-      if (p.y < -10) {
-        p.y = height + 10;
-        p.x = Math.random() * width;
-      }
-      if (p.x < -10) p.x = width + 10;
-      if (p.x > width + 10) p.x = -10;
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fillStyle = p.color + p.opacity + ')';
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = 'rgba(16, 185, 129, 0.4)';
-      ctx.fill();
-    }
-
-    requestAnimationFrame(animate);
-  }
-
-  animate();
-}
-
 function initTimeWidget() {
   function updateClock() {
     const now = new Date();
     const timeEl = document.getElementById('clock-time');
-    const digitsEl = document.getElementById('clock-time-digits');
-    const ampmEl = document.getElementById('clock-time-ampm');
     const dateEl = document.getElementById('clock-date');
 
-    let hours = now.getHours();
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    const formattedHours = String(hours).padStart(2, '0');
-
-    if (digitsEl) digitsEl.textContent = `${formattedHours}:${m}`;
-    if (ampmEl) ampmEl.textContent = ampm;
-    if (timeEl) timeEl.textContent = `${hours}:${m} ${ampm}`;
+    if (timeEl) {
+      let hours = now.getHours();
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      timeEl.textContent = `${hours}:${m} ${ampm}`;
+    }
 
     if (dateEl) {
-      const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
-      dateEl.textContent = now.toLocaleDateString('en-US', options);
+      const options = { weekday: 'short', month: 'short', day: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString(undefined, options);
     }
   }
 
@@ -159,51 +100,6 @@ function initEventListeners() {
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const clearAllBtn = document.getElementById('clear-all-btn');
   const clearHistoryBtn = document.getElementById('clear-history-btn');
-
-  // 4 Quick Action Cards event listeners
-  const cardSchedule = document.getElementById('card-schedule-task');
-  const cardShowTasks = document.getElementById('card-show-tasks');
-  const cardMarkCompleted = document.getElementById('card-mark-completed');
-  const cardGetSuggestion = document.getElementById('card-get-suggestion');
-  const chipLogCompleted = document.getElementById('chip-log-completed');
-
-  if (cardSchedule) {
-    cardSchedule.addEventListener('click', () => {
-      if (taskInput) {
-        taskInput.value = 'Remind me at ';
-        taskInput.focus();
-      }
-    });
-  }
-
-  if (cardShowTasks) {
-    cardShowTasks.addEventListener('click', () => {
-      const planTabBtn = document.querySelector('.nav-item[data-tab="plan-tab"]');
-      if (planTabBtn) planTabBtn.click();
-    });
-  }
-
-  if (cardMarkCompleted) {
-    cardMarkCompleted.addEventListener('click', () => {
-      if (taskInput) {
-        taskInput.value = 'Done: ';
-        taskInput.focus();
-      }
-    });
-  }
-
-  if (cardGetSuggestion) {
-    cardGetSuggestion.addEventListener('click', handleAiSummary);
-  }
-
-  if (chipLogCompleted) {
-    chipLogCompleted.addEventListener('click', () => {
-      if (taskInput) {
-        taskInput.value = 'Done: ';
-        taskInput.focus();
-      }
-    });
-  }
 
   if (sendBtn) sendBtn.addEventListener('click', handleUserSubmit);
 
