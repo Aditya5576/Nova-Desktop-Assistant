@@ -27,17 +27,18 @@ function parseTaskInput(inputStr) {
   // 0. Detect Conversational Questions vs Tasks
   const isQuestionOrChat = lower.startsWith('how ') || lower.startsWith('what ') || 
                            lower.startsWith('why ') || lower.startsWith('who ') || 
-                           lower.startsWith('where ') || lower.startsWith('can you') || 
-                           lower.startsWith('tell me') || lower.startsWith('hi') || 
-                           lower.startsWith('hello') || lower.endsWith('?');
+                           lower.startsWith('where ') || lower.startsWith('can ') || 
+                           lower.startsWith('could ') || lower.startsWith('tell me') || 
+                           lower.startsWith('hi') || lower.startsWith('hello') || 
+                           lower.startsWith('hey') || lower.endsWith('?');
 
-  const hasExplicitTaskKeyword = lower.includes('remind') || lower.includes('schedule') || 
-                                 lower.includes('todo') || lower.includes('done') || 
-                                 lower.includes('completed') || lower.includes('task') ||
-                                 lower.includes('in ') || lower.includes('at ') ||
-                                 lower.includes('tomorrow') || lower.includes('today');
+  const hasExplicitTaskCommand = /\b(remind|schedule|todo|add task|create task)\b/i.test(lower) ||
+                                 /\b(done:|completed:|finished:)\b/i.test(lower) ||
+                                 /\bin\s+\d+\s*(sec|min|hr|day|hour)/i.test(lower) ||
+                                 /\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/i.test(lower) ||
+                                 /\b(tomorrow|next week)\b/i.test(lower);
 
-  if (isQuestionOrChat && !hasExplicitTaskKeyword) {
+  if (isQuestionOrChat && !hasExplicitTaskCommand) {
     return null; // Route to Gemini AI Conversational Assistant
   }
 
