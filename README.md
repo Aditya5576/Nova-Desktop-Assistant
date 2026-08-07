@@ -1,38 +1,33 @@
-# 🤖 Nova (MyAssist) — Intelligent Desktop Personal Assistant
+# 🌟 Nova Desktop Assistant
 
-> **Nova** is a sleek, ultra-fast, glassmorphism desktop personal task assistant powered by **Google Gemini AI**, natural language task parsing, and **Native Windows OS Task Scheduler** integration for 100% reliable offline notifications.
+> **Nova** is a smart, ultra-fast Windows desktop task assistant that helps you schedule reminders, manage your day, and sync tasks seamlessly with your iPhone 15 — even when the app is completely closed.
 
 ---
 
-## ✨ Key Features
+## ✨ Why You'll Love Nova
 
-- 💬 **Conversational AI Assistant ("Nova")**: Ask for productivity advice, task breakdowns, or discuss your day. Powered by Google's free `gemini-2.0-flash` model.
-- ⏱️ **Natural Language Task Scheduler**: Type naturally like `"Remind me to call client tomorrow at 4pm #Work"` or `"in 1.1 min"` — Nova automatically extracts dates, times, categories, and priority levels.
-- 🛡️ **0MB RAM Offline Windows OS Notifications**: Integrates directly with `schtasks.exe` so Windows OS fires desktop notifications and audio alerts on time — even if the app or computer was closed/rebooted!
-- 🎨 **Glassmorphism Dark Mode UI**: Modern dark theme built with CSS design tokens, smooth animations, and responsive collapsible sidebar.
-- 🔲 **Compact Floating Widget Mode**: Shrinks down into an unobtrusive, always-on-top mini floating widget bar for seamless multitasking.
-- 🔴 **Priority Levels & 🔄 Recurring Tasks**: Built-in support for High, Medium, and Low priorities (`Urgent`, `P1`, `🔴`) and automatic rescheduling for Daily, Weekly, and Monthly tasks.
-- 🎵 **Dual-Tone Audio Chime Alerts**: Loud, pleasant 2-tone audio chime synthesis for reminders.
-- 🔄 **Cross-Device Auto-Sync**: Automatically syncs code, tasks, and settings across multiple PCs via GitHub.
+- 📱 **2-Way iPhone 15 Sync**: Speak to Siri or send tasks from your iPhone (`ntfy` app / iOS Shortcuts) directly to your PC in real time.
+- ⏰ **Natural Language Scheduling**: Type naturally like *"Remind me tomorrow at 4:30pm #Work"* or *"in 10 min"* — Nova automatically understands dates, times, categories, and priority levels.
+- 🔔 **12-Hour AM/PM Offline Alerts**: Integrates directly with Windows Task Scheduler so reminders fire on time with audio chimes — even if Nova or your PC was turned off!
+- 🎨 **Obsidian Dark Mode UI**: Modern dark theme with `JetBrains Mono` typography, high-contrast legibility, and chronological task sequencing.
+- 🔲 **Floating Desktop Mini Widget**: Shrinks into a compact, always-on-top floating widget bar for easy multitasking.
+- 🤖 **Google Gemini AI Assistant**: Get productivity advice, task breakdowns, and 1-click daily summaries powered by Google's free Gemini 2.0 AI.
 
 ---
 
 ## 🛠️ Built With
 
-- **Core**: Electron, HTML5, Vanilla CSS3 (Glassmorphism), JavaScript (ES6+)
+- **Framework**: Electron.js, HTML5, Vanilla CSS3, JavaScript (ES6+)
 - **AI Engine**: Google Gemini REST API (`gemini-2.0-flash`)
-- **OS Integration**: Windows Task Scheduler (`schtasks.exe`), PowerShell Toast Notifications (`Windows.UI.Notifications`)
-- **Persistence**: Local JSON Database Engine (`myassist_tasks.json`)
+- **OS Integration**: Windows Task Scheduler (`schtasks.exe`), PowerShell Toast Notifications
+- **iOS Sync**: Real-Time HTTP Stream Engine (`ntfy.sh`)
+- **Storage**: Local JSON Database (`myassist_tasks.json`)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Windows)
 
-### 1. Prerequisites
-- Node.js (v16 or higher)
-- Windows 10 / 11
-
-### 2. Installation
+### 1. Installation
 ```bash
 # Clone the repository
 git clone https://github.com/Aditya5576/Nova-Desktop-Assistant.git
@@ -44,28 +39,33 @@ cd Nova-Desktop-Assistant
 npm install
 ```
 
-### 3. Running the App
+### 2. Launch Nova
 ```bash
 # Start Nova Desktop Assistant
 npm start
 ```
-Or double-click `start-myassist.bat` / `launch-silent.vbs` for background execution with zero CMD window!
+Or double-click **`Nova.lnk`** on your desktop for 1-click instant launch!
 
 ---
 
-## 🔑 Google Gemini Free API Key Setup
+## 📱 Setting Up iPhone 15 Sync
 
-1. Get your free API key from [Google AI Studio](https://aistudio.google.com/).
-2. Open **Nova** → Click **Settings (⚙️)**.
+1. Download the free **ntfy** app on your iPhone from the iOS App Store.
+2. Subscribe to topic: `nova-my-tasks`
+3. Send any message or task from your iPhone — Nova on your PC will automatically log, schedule, and alert you in real time!
+
+---
+
+## 🔑 Free Google Gemini AI Setup (Optional)
+
+1. Get your free API key from [Google AI Studio](https://aistudio.google.com/) (1,500 free requests/day).
+2. Open **Nova** ➔ click **⚙️ Settings**.
 3. Paste your Gemini API key and click **Save Settings**.
-4. Enjoy instant conversational advice and AI daily productivity summaries!
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.
 
----
-
-<p center>Crafted with ❤️ for maximum productivity!</p>
+<p align="center">Made with ❤️ for effortless daily productivity!</p>
