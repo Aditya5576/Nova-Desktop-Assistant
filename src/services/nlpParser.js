@@ -118,7 +118,20 @@ function parseTaskInput(inputStr) {
     }
   }
 
-  // 6. PARSE DECIMAL & INTEGER RELATIVE TIMING: "in 10 secs", "in 1.1 mins", "in 2 sec"
+  // 6. Convert English number words to digits for Siri / Dictation compatibility
+  const numberWords = {
+    'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+    'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
+    'eleven': '11', 'twelve': '12', 'fifteen': '15', 'twenty': '20',
+    'thirty': '30', 'forty': '40', 'fifty': '50'
+  };
+
+  for (const [word, num] of Object.entries(numberWords)) {
+    const wordRegex = new RegExp(`\\bin\\s+${word}\\b`, 'gi');
+    lower = lower.replace(wordRegex, `in ${num}`);
+  }
+
+  // PARSE DECIMAL & INTEGER RELATIVE TIMING: "in 10 secs", "in 1.1 mins", "in 2 sec", "in three seconds"
   const relSecMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second|s)\b/i);
   const relMinMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(mins|min|minutes|minute|m)\b/i);
   const relHourMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(hrs|hr|hours|hour|h)\b/i);

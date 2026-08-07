@@ -195,7 +195,10 @@ function createWindow() {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('task-added-from-iphone', newTask);
         }
-        playWindowsAudioChime();
+
+        // Trigger Instant Windows Desktop Toast Confirmation
+        const displayTime = newTask.dueTime ? formatTime12Hour(newTask.dueTime) : (newTask.dueDate || 'Today');
+        sendWindowsToastNotification('📱 Task Received from iPhone', `"${newTask.title}" | Scheduled for ${displayTime}`);
       } catch (err) {
         logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
       }
