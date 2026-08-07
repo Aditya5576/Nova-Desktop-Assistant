@@ -244,9 +244,14 @@ function parseTaskInput(inputStr) {
 
   // Clean trailing punctuation & reminder phrases
   title = title.replace(/\s+remind me(\s+to)?\s*$/gi, '').trim();
+  title = title.replace(/^to\s+/i, '').trim();
   title = title.replace(/^[:\-\s]+|[:\-\s]+$/g, '');
 
-  if (!title) title = rawInput;
+  // If title was stripped down because user entered relative time only (e.g. "in 5 sec" / "remind me in 5 sec"),
+  // use a clean, professional title "Task Reminder" instead of unparsed relative text!
+  if (!title || title.toLowerCase() === 'in' || /^remind\s+me\s+in\s+\d+/i.test(title) || /^in\s+\d+/i.test(title)) {
+    title = 'Task Reminder';
+  }
 
   // Auto category
   if (category === 'General') {
