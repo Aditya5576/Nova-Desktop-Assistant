@@ -33,7 +33,8 @@ if (!gotTheLock) {
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.webContents.reloadIgnoringCache();
       mainWindow.focus();
     }
   });
@@ -139,6 +140,7 @@ function createWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.webContents.session.clearCache();
   mainWindow.loadFile(path.join(__dirname, 'src/renderer/index.html'));
 
   mainWindow.show();
