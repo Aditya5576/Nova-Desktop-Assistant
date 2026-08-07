@@ -127,8 +127,8 @@ function createWindow() {
     minHeight: 480,
     title: 'Nova - Desktop Task Assistant',
     icon: iconPath,
-    backgroundColor: '#0f172a',
-    show: false,
+    backgroundColor: '#08090d',
+    show: true,
     frame: true,
     autoHideMenuBar: true,
     webPreferences: {
@@ -141,10 +141,8 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'src/renderer/index.html'));
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    mainWindow.focus();
-  });
+  mainWindow.show();
+  mainWindow.focus();
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {

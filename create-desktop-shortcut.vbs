@@ -3,8 +3,8 @@ strDesktop = WshShell.SpecialFolders("Desktop")
 
 ' Create main desktop shortcut Nova.lnk
 Set oShortcut = WshShell.CreateShortcut(strDesktop & "\Nova.lnk")
-oShortcut.TargetPath = "wscript.exe"
-oShortcut.Arguments = """c:\Users\adity\Desktop\MyAssist\launch-silent.vbs"""
+oShortcut.TargetPath = "c:\Users\adity\Desktop\MyAssist\node_modules\.bin\electron.cmd"
+oShortcut.Arguments = "."
 oShortcut.WorkingDirectory = "c:\Users\adity\Desktop\MyAssist"
 oShortcut.WindowStyle = 1
 oShortcut.IconLocation = "c:\Users\adity\Desktop\MyAssist\assets\icon.ico"
