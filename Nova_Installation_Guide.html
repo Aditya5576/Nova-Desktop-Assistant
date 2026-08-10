@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Desktop Assistant — Complete Setup Guide</title>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --card-bg: #0f172a;
+      --accent-green: #10b981;
+      --accent-mint: #34d399;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 36px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      color: var(--accent-green);
+      font-size: 2.4rem;
+      margin: 0 0 8px 0;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin: 0;
+    }
+    .btn-download-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .dl-card {
+      background: #111827;
+      border: 1px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+    .dl-card:hover {
+      transform: translateY(-2px);
+    }
+    .dl-card h3 {
+      color: #fff;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    .dl-card p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 14px;
+    }
+    .btn-download {
+      display: inline-block;
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .step-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 4px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .step-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent-mint);
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+    ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+    code {
+      background: #000;
+      color: var(--accent-mint);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .banner {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌟 Nova Desktop Assistant</h1>
+      <p>Complete Beginner Installation & Setup Documentation</p>
+    </div>
+
+    <!-- Direct Downloads -->
+    <div class="btn-download-grid">
+      <div class="dl-card">
+        <h3>🛠️ Step 1 Engine</h3>
+        <p>Download required Node.js v20 LTS engine for Windows</p>
+        <a href="https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi" target="_blank" class="btn-download">Download Node.js (.msi)</a>
+      </div>
+      <div class="dl-card">
+        <h3>📦 Step 2 App Files</h3>
+        <p>Download complete Nova application project files</p>
+        <a href="https://github.com/Aditya5576/Nova-Desktop-Assistant/archive/refs/heads/main.zip" target="_blank" class="btn-download">Download Nova (.zip)</a>
+      </div>
+    </div>
+
+    <!-- Step 1 Guide -->
+    <div class="step-card">
+      <h2 class="step-title">🛠️ Part 1: Install Node.js</h2>
+      <ol>
+        <li>Click the <strong>Download Node.js (.msi)</strong> button above.</li>
+        <li>Open the downloaded <code>node-v20.18.0-x64.msi</code> installer.</li>
+        <li>Click <strong>Next ➔ Next ➔ Install</strong>.</li>
+        <li>If Windows asks for permission, click <strong>Yes</strong>, then click <strong>Finish</strong>.</li>
+      </ol>
+    </div>
+
+    <!-- Step 2 Guide -->
+    <div class="step-card">
+      <h2 class="step-title">📁 Part 2: Extract Nova App Files</h2>
+      <ol>
+        <li>Click the <strong>Download Nova (.zip)</strong> button above.</li>
+        <li>Open your computer's <strong>Downloads</strong> folder.</li>
+        <li>Right-click on <code>Nova-Desktop-Assistant-main.zip</code> ➔ Click <strong>Extract All...</strong>.</li>
+        <li>Click <strong>Extract</strong>. The extracted folder will open automatically!</li>
+      </ol>
+    </div>
+
+    <!-- Step 3 Guide -->
+    <div class="step-card">
+      <h2 class="step-title">🚀 Part 3: 1-Click Launch!</h2>
+      <ol>
+        <li>Inside the extracted <code>Nova-Desktop-Assistant-main</code> folder, find <code>setup-and-run.bat</code>.</li>
+        <li>Double-click <strong><code>setup-and-run.bat</code></strong>!</li>
+      </ol>
+      <div class="banner">
+        🎉 Sit back for 20 seconds! The batch script will automatically download app packages, create a <code>Nova.lnk</code> icon on your Desktop, and launch Nova on your screen!
+      </div>
+    </div>
+
+    <!-- Step 4 Guide -->
+    <div class="step-card">
+      <h2 class="step-title">🔑 Part 4: Add Free Gemini AI Key (Optional)</h2>
+      <ol>
+        <li>Go to <a href="https://aistudio.google.com/" target="_blank" style="color: #38bdf8;">Google AI Studio</a> and sign in.</li>
+        <li>Click <strong>Create API Key</strong> and copy your key.</li>
+        <li>Open Nova ➔ Click <strong>⚙️ Settings</strong> ➔ Paste your API key ➔ Click <strong>Save Settings</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="footer">
+      Nova Desktop Assistant &bull; Created with ❤️ for maximum productivity
+    </div>
+  </div>
+</body>
+</html>
