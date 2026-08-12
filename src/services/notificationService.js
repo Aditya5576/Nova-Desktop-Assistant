@@ -6,18 +6,20 @@ const appPaths = require('./appPaths');
 
 class NotificationService {
   constructor() {
-    // sendToast.ps1 is a read-only packaged resource.
-    // getPackagedScriptsPath() returns process.resourcesPath/scripts in production
-    // and project_root/scripts in development / test context.
     this.scriptsDir = appPaths.getPackagedScriptsPath();
+    this.isTestEnv = process.env.NODE_ENV === 'test' ||
+                     (process.argv && process.argv.some(arg => arg.includes('test_runner.js') || arg.includes('mocha')));
+    this.mockDispatches = [];
   }
 
   playAudioChime() {
+    if (this.isTestEnv) return;
     const args = ['-NoProfile', '-Command', '[System.Media.SystemSounds]::Exclamation.Play()'];
     execFile('powershell.exe', args, () => {});
   }
 
   sendWindowsToast(title, body) {
+    if (this.isTestEnv) return;
     const safeTitle = title || 'Task Reminder';
     const safeBody = body || 'Reminder due now!';
 
@@ -45,6 +47,7 @@ class NotificationService {
   }
 
   sendIosPushNotification(title, body, topic = 'nova-my-tasks') {
+    if (this.isTestEnv) return;
     try {
       const activeTopic = (topic && topic.trim()) ? topic.trim() : 'nova-my-tasks';
       const safeTitle = (title || 'Nova Task Reminder').replace(/[^\x00-\x7F]/g, '');
@@ -82,6 +85,10 @@ class NotificationService {
   dispatchNotification(title, body, settings = {}) {
     const soundOn = settings.soundEnabled !== false;
     const notifOn = settings.notificationsEnabled !== false;
+
+    if (this.isTestEnv) {
+      this.mockDispatches.push({ title, body, soundOn, notifOn, topic: settings.ntfyTopic });
+    }
 
     if (soundOn) {
       this.playAudioChime();

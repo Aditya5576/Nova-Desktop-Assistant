@@ -12,16 +12,20 @@
  *  TEST 8: Scheduler registration is idempotent.
  *  TEST 9: Single Dispatch Invariant — Re-executing runTask.ps1 on a notified task produces ZERO dispatches.
  *  TEST 10: Concurrent Electron + PowerShell Claim — Exactly ONE claim succeeds, second process yields 0 dispatches.
+ *  TEST 11: OS Isolation Invariant — TaskSchedulerService in test mode creates ZERO real Windows OS Scheduled Tasks.
+ *  TEST 12: Production DB Isolation Invariant — Unit tests leave production %APPDATA% database untouched.
+ *  TEST 13: Notification Isolation Invariant — NotificationService suppresses live toasts and ntfy network POSTs in test mode.
  */
 
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, execSync } = require('child_process');
 const TaskSchedulerService = require('../src/services/taskSchedulerService');
 const TaskService = require('../src/services/taskService');
 const DatabaseService = require('../src/services/database');
-const ReminderService = require('../src/services/reminderService');
+const NotificationService = require('../src/services/notificationService');
+const appPaths = require('../src/services/appPaths');
 
 describe('Task Scheduler Duplicate Registration & Single Dispatch Invariant Suite', () => {
   let db;
@@ -179,13 +183,11 @@ describe('Task Scheduler Duplicate Registration & Single Dispatch Invariant Suit
     };
     fs.writeFileSync(dbFile, JSON.stringify(mockDbContent, null, 2), 'utf-8');
 
-    // 1st Execution: Should claim lock & set notified = true
     execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', runnerCopy, '-Id', taskId]);
 
     const updated1 = JSON.parse(fs.readFileSync(dbFile, 'utf-8'));
     assert.strictEqual(updated1.tasks[0].notified, true, 'First execution must set notified = true');
 
-    // 2nd Execution: Should immediately exit because notified === true
     execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', runnerCopy, '-Id', taskId]);
 
     const updated2 = JSON.parse(fs.readFileSync(dbFile, 'utf-8'));
@@ -204,12 +206,64 @@ describe('Task Scheduler Duplicate Registration & Single Dispatch Invariant Suit
       reminder: true
     });
 
-    // 1. Electron claims task
     const claim1 = db.claimTaskReminder(task.id);
     assert.ok(claim1, 'First claim must succeed');
 
-    // 2. Second claim (simulating concurrent process)
     const claim2 = db.claimTaskReminder(task.id);
     assert.strictEqual(claim2, null, 'Second claim must return null (ALREADY_CLAIMED)');
+  });
+
+  it('TEST 11: OS Isolation Invariant — TaskSchedulerService in test mode creates ZERO real Windows OS Scheduled Tasks', () => {
+    const testSched = new TaskSchedulerService();
+    assert.strictEqual(testSched.isTestEnv, true, 'isTestEnv must be true in test runner');
+
+    testSched.scheduleTask({
+      id: 'test_os_isolation_99',
+      title: 'OS Isolation Test',
+      dueDate: '2026-12-31',
+      dueTime: '09:00:00',
+      status: 'pending',
+      reminder: true,
+      notified: false
+    });
+
+    assert.ok(testSched.mockRegistry.has('MyAssist_Rem_test_os_isolation_99'), 'Mock registry captures task');
+
+    // Query real Windows Task Scheduler to confirm zero test tasks were created on the OS
+    let realOsTasks = '';
+    try {
+      realOsTasks = execSync('powershell.exe -NoProfile -Command "Get-ScheduledTask | Where-Object { $_.TaskName -eq \'MyAssist_Rem_test_os_isolation_99\' } | Select-Object -ExpandProperty TaskName"', { encoding: 'utf-8' }).trim();
+    } catch (e) {}
+
+    assert.strictEqual(realOsTasks, '', 'Real Windows OS Task Scheduler must NOT contain the test task');
+  });
+
+  it('TEST 12: Production DB Isolation Invariant — Unit tests leave production %APPDATA% database untouched', () => {
+    const prodDbPath = path.join(process.env.APPDATA || '', 'Nova', 'myassist_tasks.json');
+    let initialMtime = null;
+    if (fs.existsSync(prodDbPath)) {
+      initialMtime = fs.statSync(prodDbPath).mtimeMs;
+    }
+
+    // Run database service operations on testDbPath
+    const dummyDb = new DatabaseService();
+    dummyDb.dbPath = testDbPath;
+    dummyDb.init();
+    dummyDb.addTask({ title: 'Isolated Task Test' });
+
+    if (fs.existsSync(prodDbPath)) {
+      const finalMtime = fs.statSync(prodDbPath).mtimeMs;
+      assert.strictEqual(finalMtime, initialMtime, 'Production database mtime must remain identical after test operations');
+    }
+  });
+
+  it('TEST 13: Notification Isolation Invariant — NotificationService suppresses live toasts and ntfy network POSTs in test mode', () => {
+    const notif = new NotificationService();
+    assert.strictEqual(notif.isTestEnv, true, 'NotificationService must operate in test mode');
+
+    notif.dispatchNotification('Test Title', 'Test Body', { soundEnabled: true, notificationsEnabled: true, ntfyTopic: 'test-topic' });
+
+    assert.strictEqual(notif.mockDispatches.length, 1, 'mockDispatches must capture dispatched notification');
+    assert.strictEqual(notif.mockDispatches[0].title, 'Test Title');
   });
 });
