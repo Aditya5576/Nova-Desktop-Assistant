@@ -7,7 +7,8 @@ const testFiles = [
   './tests/nlpParser.test.js',
   './tests/taskDatabase.test.js',
   './tests/ipcContract.test.js',
-  './tests/notification.test.js'
+  './tests/notification.test.js',
+  './tests/geminiSecurity.test.js'
 ];
 
 let totalTests = 0;
