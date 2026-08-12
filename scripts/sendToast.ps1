@@ -5,6 +5,10 @@ param (
 )
 
 try {
+    Add-Type -AssemblyName System.Security
+    $xmlTitle = [System.Security.SecurityElement]::Escape($Title)
+    $xmlBody = [System.Security.SecurityElement]::Escape($Body)
+
     [System.Media.SystemSounds]::Exclamation.Play()
     [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
@@ -13,8 +17,8 @@ try {
 <toast>
   <visual>
     <binding template="ToastGeneric">
-      <text>$Title</text>
-      <text>$Body</text>
+      <text>$xmlTitle</text>
+      <text>$xmlBody</text>
     </binding>
   </visual>
 </toast>
