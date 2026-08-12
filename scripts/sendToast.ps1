@@ -17,8 +17,8 @@ try {
 <toast>
   <visual>
     <binding template="ToastGeneric">
-      <text>$xmlTitle</text>
-      <text>$xmlBody</text>
+      <text>$($xmlTitle)</text>
+      <text>$($xmlBody)</text>
     </binding>
   </visual>
 </toast>
@@ -48,8 +48,8 @@ try {
 if ($Topic -and $Topic.Trim() -and $Topic.Trim() -ne "none") {
     try {
         $safeTopic = $Topic.Trim()
-        $url = "https://ntfy.sh/$safeTopic"
+        $url = "https://ntfy.sh/${safeTopic}"
         $safeTitle = $Title -replace '[^\x00-\x7F]', ''
-        Invoke-RestMethod -Uri $url -Method Post -Body "$Body" -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell" } -ErrorAction SilentlyContinue
+        Invoke-RestMethod -Uri $url -Method Post -Body "${Body}" -Headers @{ "Title" = "${safeTitle}"; "Priority" = "high"; "Tags" = "bell" } -ErrorAction SilentlyContinue
     } catch {}
 }

@@ -10,7 +10,8 @@ const testFiles = [
   './tests/notification.test.js',
   './tests/geminiSecurity.test.js',
   './tests/services.test.js',
-  './tests/appPaths.test.js'
+  './tests/appPaths.test.js',
+  './tests/powershellSyntax.test.js'
 ];
 
 let totalTests = 0;
