@@ -1,11 +1,13 @@
 {
   "name": "myassist-desktop",
   "version": "1.0.0",
-  "description": "Personal AI-inspired Task Assistant Desktop App",
+  "description": "Nova — Personal AI-inspired Desktop Task Assistant",
+  "productName": "Nova",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node test_runner.js"
+    "test": "node test_runner.js",
+    "build": "electron-builder --win"
   },
   "keywords": [
     "assistant",
@@ -13,9 +15,58 @@
     "electron",
     "desktop-app"
   ],
-  "author": "Antigravity",
+  "author": "Aditya",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^34.0.0"
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.nova.desktop",
+    "productName": "Nova",
+    "copyright": "Copyright 2026 Aditya",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*",
+      "!**/.DS_Store",
+      "!**/Thumbs.db"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts",
+        "filter": [
+          "**/*.ps1"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nova",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
