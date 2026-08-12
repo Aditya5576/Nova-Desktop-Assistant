@@ -9,7 +9,7 @@ strIcon = strAppDir & "\assets\icon.ico"
 Set f = fso.CreateTextFile(strVbsLauncher, True)
 f.WriteLine "Set WshShell = CreateObject(""WScript.Shell"")"
 f.WriteLine "WshShell.CurrentDirectory = """ & strAppDir & """"
-f.WriteLine "WshShell.Run """"" & strAppDir & "\node_modules\electron\dist\electron.exe"""" ."", 0, False"
+f.WriteLine "WshShell.Run """"""" & strAppDir & "\node_modules\electron\dist\electron.exe"""" ."", 0, False"
 f.Close
 
 Sub FixShortcut(p)
