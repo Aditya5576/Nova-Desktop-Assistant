@@ -59,7 +59,11 @@ class ReminderService {
             const notifTitle = claimedTask.title || 'Task Reminder';
             const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
 
-            this.notifications.dispatchNotification(notifTitle, notifBody, settings);
+            try {
+              this.notifications.dispatchNotification(notifTitle, notifBody, settings);
+            } catch (err) {
+              console.error(`Best-effort notification dispatch failed for task "${claimedTask.id}":`, err.message);
+            }
           }
         }
       });

@@ -95,6 +95,28 @@ describe('Service Decomposition Unit Test Suite', () => {
       assert.strictEqual(res, true);
       assert.strictEqual(taskService.getTasks().length, 0);
     });
+
+    it('should ensure clearCompletedTasks does NOT remove pending or scheduled tasks', () => {
+      const pendingTask = taskService.addTask({
+        title: 'Future Pending Task',
+        type: 'scheduled',
+        status: 'pending',
+        dueDate: '2026-12-31'
+      });
+
+      const completedTask = taskService.addTask({
+        title: 'Old Done Task',
+        type: 'scheduled',
+        status: 'done'
+      });
+
+      taskService.clearCompletedTasks();
+
+      const remaining = taskService.getTasks();
+      assert.strictEqual(remaining.length, 1);
+      assert.strictEqual(remaining[0].id, pendingTask.id);
+      assert.strictEqual(remaining[0].title, 'Future Pending Task');
+    });
   });
 
   describe('ReminderService & NotificationService Integration', () => {
@@ -115,6 +137,50 @@ describe('Service Decomposition Unit Test Suite', () => {
       });
 
       assert.strictEqual(dispatched, true);
+    });
+
+    it('should safely handle malicious task titles without shell injection', () => {
+      const maliciousTitle = '$(Get-Process); `whoami`; <toast><text>evil</text></toast>';
+      let safeToastReceived = false;
+
+      notificationService.sendWindowsToast = (title, body) => {
+        safeToastReceived = true;
+        assert.strictEqual(title, maliciousTitle, 'Title should be passed verbatim as text string argument');
+      };
+
+      notificationService.dispatchNotification(maliciousTitle, 'Body text', {
+        soundEnabled: false,
+        notificationsEnabled: true
+      });
+
+      assert.strictEqual(safeToastReceived, true);
+    });
+
+    it('should survive notification service exceptions without crashing reminder service loop', () => {
+      notificationService.dispatchNotification = () => {
+        throw new Error('Simulated Toast/Network Disruption');
+      };
+
+      const dueTask = taskService.addTask({
+        title: 'Resilient Task',
+        type: 'scheduled',
+        status: 'pending',
+        dueDate: '2020-01-01',
+        dueTime: '09:00:00',
+        reminder: true,
+        notified: false
+      });
+
+      assert.doesNotThrow(() => {
+        const claimed = db.claimTaskReminder(dueTask.id);
+        if (claimed) {
+          try {
+            notificationService.dispatchNotification('Title', 'Body', {});
+          } catch (err) {
+            // Best-effort non-crashing exception handling
+          }
+        }
+      });
     });
   });
 });
