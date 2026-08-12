@@ -3,6 +3,7 @@ node_modules/
 .gemini/
 *.log
 test_*.js
+!test_runner.js
 scripts/tempShortcut.vbs
 myassist_tasks.json
 src/services/myassist_tasks.json
