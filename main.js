@@ -308,6 +308,10 @@ function startReminderChecker() {
   reminderInterval = setInterval(() => {
     if (!db) return;
 
+    const settings = db.getSettings();
+    const soundOn = settings.soundEnabled !== false;
+    const notifOn = settings.notificationsEnabled !== false;
+
     const tasks = db.getTasks();
     const now = new Date();
     const currentDateStr = getLocalDateString(now);
@@ -329,24 +333,28 @@ function startReminderChecker() {
         if (isTodayOrPastDate && isTimeDue) {
           db.updateTask(task.id, { notified: true });
 
-          // Play Audio Chime
-          playWindowsAudioChime();
+          // Play Audio Chime if sound enabled
+          if (soundOn) {
+            playWindowsAudioChime();
+          }
 
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('trigger-reminder', task);
           }
 
-          // Trigger Clean Windows Native Desktop Notification
-          const priorityStr = (task.priority || 'medium').toUpperCase();
-          const timeStr = task.dueTime ? formatTime12Hour(task.dueTime) : '';
+          // Trigger Clean Windows Native Desktop Notification if notifications enabled
+          if (notifOn) {
+            const priorityStr = (task.priority || 'medium').toUpperCase();
+            const timeStr = task.dueTime ? formatTime12Hour(task.dueTime) : '';
 
-          const notifTitle = task.title || 'Task Reminder';
-          const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
-          
-          sendWindowsToastNotification(notifTitle, notifBody);
+            const notifTitle = task.title || 'Task Reminder';
+            const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
+            
+            sendWindowsToastNotification(notifTitle, notifBody);
 
-          // 📱 Dispatch Single Free Instant Push Notification directly to iPhone 15
-          sendIosPushNotification(notifTitle, notifBody);
+            // 📱 Dispatch Single Free Instant Push Notification directly to iPhone 15
+            sendIosPushNotification(notifTitle, notifBody);
+          }
         }
       }
     });
@@ -360,11 +368,26 @@ ipcMain.handle('add-task', (event, taskData) => db.addTask(taskData));
 
 ipcMain.handle('parse-input', (event, inputStr) => parseTaskInput(inputStr));
 
-ipcMain.handle('update-task', (event, { id, updates }) => db.updateTask(id, updates));
+ipcMain.handle('update-task', (event, arg1, arg2) => {
+  if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
+    return db.updateTask(arg1.id, arg1.updates);
+  }
+  return db.updateTask(arg1, arg2);
+});
 
-ipcMain.handle('snooze-task', (event, { id, minutes }) => db.snoozeTask(id, minutes));
+ipcMain.handle('snooze-task', (event, arg1, arg2) => {
+  if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
+    return db.snoozeTask(arg1.id, arg1.minutes);
+  }
+  return db.snoozeTask(arg1, arg2);
+});
 
-ipcMain.handle('delete-task', (event, id) => db.deleteTask(id));
+ipcMain.handle('delete-task', (event, idOrObj) => {
+  const id = (typeof idOrObj === 'object' && idOrObj !== null) ? idOrObj.id : idOrObj;
+  return db.deleteTask(id);
+});
+
+ipcMain.handle('clear-completed-tasks', () => db.clearCompletedTasks());
 
 ipcMain.handle('clear-all-tasks', () => db.clearAllTasks());
 

@@ -4,9 +4,20 @@ const apiBridge = {
   getTasks: () => ipcRenderer.invoke('get-tasks'),
   addTask: (taskData) => ipcRenderer.invoke('add-task', taskData),
   parseInput: (inputStr) => ipcRenderer.invoke('parse-input', inputStr),
-  updateTask: (id, updates) => ipcRenderer.invoke('update-task', { id, updates }),
-  snoozeTask: (id, minutes) => ipcRenderer.invoke('snooze-task', { id, minutes }),
+  updateTask: (idOrObj, updates) => {
+    if (typeof idOrObj === 'object' && idOrObj !== null && idOrObj.id) {
+      return ipcRenderer.invoke('update-task', { id: idOrObj.id, updates: idOrObj.updates || updates });
+    }
+    return ipcRenderer.invoke('update-task', { id: idOrObj, updates });
+  },
+  snoozeTask: (idOrObj, minutes) => {
+    if (typeof idOrObj === 'object' && idOrObj !== null && idOrObj.id) {
+      return ipcRenderer.invoke('snooze-task', { id: idOrObj.id, minutes: idOrObj.minutes !== undefined ? idOrObj.minutes : minutes });
+    }
+    return ipcRenderer.invoke('snooze-task', { id: idOrObj, minutes });
+  },
   deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
+  clearCompletedTasks: () => ipcRenderer.invoke('clear-completed-tasks'),
   clearAllTasks: () => ipcRenderer.invoke('clear-all-tasks'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   updateSettings: (settings) => ipcRenderer.invoke('update-settings', settings),
