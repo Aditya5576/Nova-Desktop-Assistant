@@ -4,6 +4,10 @@ const fs = require('fs');
 const https = require('https');
 const { exec } = require('child_process');
 const DatabaseService = require('./src/services/database');
+const TaskSchedulerService = require('./src/services/taskSchedulerService');
+const TaskService = require('./src/services/taskService');
+const NotificationService = require('./src/services/notificationService');
+const ReminderService = require('./src/services/reminderService');
 const GeminiService = require('./src/services/geminiService');
 const { parseTaskInput, getLocalDateString, getLocalTimeStringSec } = require('./src/services/nlpParser');
 const logger = require('./src/services/logger');
@@ -43,79 +47,82 @@ if (!gotTheLock) {
 let mainWindow;
 let tray;
 let db;
+let scheduler;
+let taskService;
+let notificationService;
+let reminderService;
 let gemini;
 let ntfySubscriber;
-let reminderInterval;
 let isWidgetMode = false;
 
-function playWindowsAudioChime() {
-  const cmd = `powershell -NoProfile -Command "[System.Media.SystemSounds]::Exclamation.Play()"`;
-  exec(cmd, () => {});
+function setWidgetDimensions(isWidget) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  isWidgetMode = isWidget;
+  if (isWidget) {
+    mainWindow.setSize(380, 220, true);
+    mainWindow.setAlwaysOnTop(true, 'floating');
+  } else {
+    mainWindow.setSize(500, 600, true);
+    mainWindow.setAlwaysOnTop(false);
+  }
+  mainWindow.webContents.send('widget-mode-changed', isWidgetMode);
 }
 
-// Clean Minimalist Windows Toast Notification (Single Dispatch - No Double Banner)
-function sendWindowsToastNotification(title, body) {
-  const safeTitle = title || 'Task Reminder';
-  const safeBody = body || 'Reminder due now!';
-
-  // Single Reliable Windows Toast Script (PowerShell Toast with sound)
+function createSystemTray() {
+  if (tray) return;
+  const iconPath = path.join(__dirname, 'assets', 'icon.ico');
+  let trayIcon;
   try {
-    const scriptPath = path.join(__dirname, 'scripts', 'sendToast.ps1');
-    const psTitle = safeTitle.replace(/"/g, '`"');
-    const psBody = safeBody.replace(/"/g, '`"');
-    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${psTitle}" -Body "${psBody}" -Topic "none"`;
-    exec(cmd, (err) => {
-      if (err) {
-        logger.warn(`PowerShell Toast command exited with notice: ${err.message}`);
-      } else {
-        logger.info(`PowerShell Toast dispatched successfully for "${safeTitle}"`);
-      }
-    });
-  } catch (err) {
-    logger.error(`Failed to trigger PowerShell toast script: ${err.message}`);
+    trayIcon = nativeImage.createFromPath(iconPath);
+  } catch (e) {
+    trayIcon = nativeImage.createEmpty();
   }
-}
 
-// 📱 Free iOS iPhone 15 Instant Push Notification Engine (via ntfy.sh)
-function sendIosPushNotification(title, body) {
-  try {
-    if (!db) return;
-    const settings = db.getSettings();
-    const topic = (settings.ntfyTopic && settings.ntfyTopic.trim()) ? settings.ntfyTopic.trim() : 'nova-my-tasks';
-    const safeTitle = (title || 'Nova Task Reminder').replace(/[^\x00-\x7F]/g, '');
-    const postData = body || 'Task reminder due now!';
+  tray = new Tray(trayIcon);
+  tray.setToolTip('Nova - Desktop Task Assistant');
 
-    const options = {
-      hostname: 'ntfy.sh',
-      port: 443,
-      path: `/${encodeURIComponent(topic)}`,
-      method: 'POST',
-      headers: {
-        'Title': safeTitle,
-        'Priority': 'high',
-        'Tags': 'bell,alarm_clock',
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Length': Buffer.byteLength(postData)
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Nova',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
       }
-    };
+    },
+    {
+      label: 'Toggle Widget Mode',
+      click: () => {
+        setWidgetDimensions(!isWidgetMode);
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit Nova',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
 
-    const req = https.request(options, (res) => {
-      console.log(`iOS Push Notification dispatched to ntfy.sh/${topic} (Status: ${res.statusCode})`);
-    });
-
-    req.on('error', (e) => {
-      console.error('iOS push notification failed:', e.message);
-    });
-
-    req.write(postData);
-    req.end();
-  } catch (err) {
-    console.error('Error sending iOS push notification:', err);
-  }
+  tray.setContextMenu(contextMenu);
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 }
 
 function createWindow() {
   db = new DatabaseService();
+  scheduler = new TaskSchedulerService();
+  taskService = new TaskService(db, scheduler);
+  notificationService = new NotificationService();
+  reminderService = new ReminderService(db, notificationService);
+
   const decryptedKey = db.getDecryptedApiKey();
   gemini = new GeminiService(decryptedKey);
 
@@ -159,7 +166,13 @@ function createWindow() {
   });
 
   createSystemTray();
-  startReminderChecker();
+
+  // Start unified Reminder Service
+  reminderService.start((claimedTask) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('trigger-reminder', claimedTask);
+    }
+  });
 
   // Initialize Real-Time iPhone Task Subscriber Engine
   const currentSettings = db.getSettings();
@@ -189,16 +202,14 @@ function createWindow() {
           };
         }
 
-        const newTask = db.addTask(parsed);
+        const newTask = taskService.addTask(parsed);
         logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
         
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('task-added-from-iphone', newTask);
         }
 
-        // Trigger Instant Windows Desktop Toast Confirmation
-        const displayTime = newTask.dueTime ? formatTime12Hour(newTask.dueTime) : (newTask.dueDate || 'Today');
-        sendWindowsToastNotification('📱 Task Received from iPhone', `"${newTask.title}" | Scheduled for ${displayTime}`);
+        notificationService.sendWindowsToast('📱 Task Received from iPhone', `"${newTask.title}"`);
       } catch (err) {
         logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
       }
@@ -230,147 +241,15 @@ function toggleWindowVisibility() {
   }
 }
 
-function createSystemTray() {
-  try {
-    const icoPath = path.join(__dirname, 'assets', 'icon.ico');
-    let trayIcon = nativeImage.createFromPath(icoPath);
-
-    if (trayIcon.isEmpty()) {
-      const iconBuffer = Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAzSURBVHgB7cxBDQAwDMCw40h/p2Z4wMEfS1IBTfLE3u32KIB27t0eBdDOHQXQzsEB2rkf6yQC2N8x7f4AAAAASUVORUS5CYII=',
-        'base64'
-      );
-      trayIcon = nativeImage.createFromBuffer(iconBuffer);
-    }
-
-    tray = new Tray(trayIcon);
-    tray.setToolTip('Nova - Click to toggle dashboard');
-
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: 'Show / Hide Assistant',
-        click: () => toggleWindowVisibility()
-      },
-      {
-        label: 'Toggle Mini Widget Mode',
-        click: () => {
-          isWidgetMode = !isWidgetMode;
-          setWidgetDimensions(isWidgetMode);
-        }
-      },
-      { type: 'separator' },
-      {
-        label: 'Exit Nova',
-        click: () => {
-          app.isQuitting = true;
-          app.quit();
-        }
-      }
-    ]);
-
-    tray.setContextMenu(contextMenu);
-    tray.on('click', () => toggleWindowVisibility());
-    tray.on('double-click', () => toggleWindowVisibility());
-  } catch (e) {
-    console.error('Failed to create tray icon:', e);
-  }
-}
-
-function setWidgetDimensions(enableWidget) {
-  if (!mainWindow) return;
-  isWidgetMode = enableWidget;
-
-  if (isWidgetMode) {
-    mainWindow.setSize(440, 260);
-    mainWindow.setAlwaysOnTop(true);
-  } else {
-    mainWindow.setSize(500, 600);
-    mainWindow.setAlwaysOnTop(false);
-  }
-  mainWindow.webContents.send('widget-mode-changed', isWidgetMode);
-}
-
-function formatTime12Hour(timeStr) {
-  if (!timeStr) return '';
-  const parts = String(timeStr).split(':');
-  if (parts.length < 2) return timeStr;
-  let hours = parseInt(parts[0], 10);
-  const minutes = parts[1].padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  return `${hours}:${minutes} ${ampm}`;
-}
-
-function startReminderChecker() {
-  if (reminderInterval) clearInterval(reminderInterval);
-
-  // Sharp 1-second polling daemon for exact time notifications
-  reminderInterval = setInterval(() => {
-    if (!db) return;
-
-    const settings = db.getSettings();
-    const soundOn = settings.soundEnabled !== false;
-    const notifOn = settings.notificationsEnabled !== false;
-
-    const tasks = db.getTasks();
-    const now = new Date();
-    const currentDateStr = getLocalDateString(now);
-    const currentTimeStrSec = getLocalTimeStringSec(now);
-
-    tasks.forEach(task => {
-      if (
-        task.type === 'scheduled' &&
-        task.status === 'pending' &&
-        task.reminder &&
-        !task.notified &&
-        task.dueDate &&
-        task.dueTime
-      ) {
-        const isTodayOrPastDate = task.dueDate <= currentDateStr;
-        const taskTimeSec = task.dueTime.length === 5 ? `${task.dueTime}:00` : task.dueTime;
-        const isTimeDue = (task.dueDate < currentDateStr) || (task.dueDate === currentDateStr && taskTimeSec <= currentTimeStrSec);
-
-        if (isTodayOrPastDate && isTimeDue) {
-          const claimedTask = db.claimTaskReminder(task.id);
-          if (!claimedTask) return;
-
-          // Play Audio Chime if sound enabled
-          if (soundOn) {
-            playWindowsAudioChime();
-          }
-
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('trigger-reminder', claimedTask);
-          }
-
-          // Trigger Clean Windows Native Desktop Notification if notifications enabled
-          if (notifOn) {
-            const priorityStr = (claimedTask.priority || 'medium').toUpperCase();
-            const timeStr = claimedTask.dueTime ? formatTime12Hour(claimedTask.dueTime) : '';
-
-            const notifTitle = claimedTask.title || 'Task Reminder';
-            const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
-            
-            sendWindowsToastNotification(notifTitle, notifBody);
-
-            // 📱 Dispatch Single Free Instant Push Notification directly to iPhone 15
-            sendIosPushNotification(notifTitle, notifBody);
-          }
-        }
-      }
-    });
-  }, 1000);
-}
-
 // IPC Handlers
-ipcMain.handle('get-tasks', () => db.getTasks());
+ipcMain.handle('get-tasks', () => taskService.getTasks());
 
 ipcMain.handle('add-task', (event, taskData) => {
   if (typeof taskData !== 'object' || taskData === null) return null;
   if (taskData.title && typeof taskData.title === 'string') {
     taskData.title = taskData.title.slice(0, 500);
   }
-  return db.addTask(taskData);
+  return taskService.addTask(taskData);
 });
 
 ipcMain.handle('parse-input', (event, inputStr) => {
@@ -389,7 +268,7 @@ ipcMain.handle('update-task', (event, arg1, arg2) => {
     updates = arg2;
   }
   if (!id || typeof updates !== 'object' || updates === null) return null;
-  return db.updateTask(id, updates);
+  return taskService.updateTask(id, updates);
 });
 
 ipcMain.handle('snooze-task', (event, arg1, arg2) => {
@@ -403,18 +282,18 @@ ipcMain.handle('snooze-task', (event, arg1, arg2) => {
     minutes = typeof arg2 === 'number' ? arg2 : 15;
   }
   if (!id) return null;
-  return db.snoozeTask(id, minutes);
+  return taskService.snoozeTask(id, minutes);
 });
 
 ipcMain.handle('delete-task', (event, idOrObj) => {
   const id = (typeof idOrObj === 'object' && idOrObj !== null) ? idOrObj.id : idOrObj;
   if (typeof id !== 'string' || !id.trim()) return false;
-  return db.deleteTask(id);
+  return taskService.deleteTask(id);
 });
 
-ipcMain.handle('clear-completed-tasks', () => db.clearCompletedTasks());
+ipcMain.handle('clear-completed-tasks', () => taskService.clearCompletedTasks());
 
-ipcMain.handle('clear-all-tasks', () => db.clearAllTasks());
+ipcMain.handle('clear-all-tasks', () => taskService.clearAllTasks());
 
 function getSanitizedSettings() {
   const settings = db.getSettings();
@@ -449,20 +328,20 @@ ipcMain.handle('update-settings', (event, settings) => {
 // Gemini AI IPC Calls
 ipcMain.handle('gemini-chat', async (event, userInput) => {
   if (typeof userInput !== 'string' || !userInput.trim()) return "Please type a message, Aditya!";
-  const tasks = db.getTasks();
+  const tasks = taskService.getTasks();
   return await gemini.assistantResponse(userInput.slice(0, 2000), tasks);
 });
 
 ipcMain.handle('gemini-summary', async () => {
-  const tasks = db.getTasks();
+  const tasks = taskService.getTasks();
   return await gemini.generateDailySummary(tasks);
 });
 
 ipcMain.on('toggle-widget-mode', (event, isWidget) => setWidgetDimensions(isWidget));
 
 ipcMain.on('show-notification', (event, { title, body }) => {
-  sendWindowsToastNotification(title, body);
-  sendIosPushNotification(title, body);
+  if (!db) return;
+  notificationService.dispatchNotification(title, body, db.getSettings());
 });
 
 app.whenReady().then(() => {
@@ -474,6 +353,6 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (reminderInterval) clearInterval(reminderInterval);
+  if (reminderService) reminderService.stop();
   if (process.platform !== 'darwin') app.quit();
 });
