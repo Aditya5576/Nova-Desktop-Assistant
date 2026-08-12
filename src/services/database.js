@@ -61,7 +61,9 @@ class DatabaseService {
 
   write(data) {
     try {
-      fs.writeFileSync(this.dbPath, JSON.stringify(data, null, 2), 'utf-8');
+      const tempPath = `${this.dbPath}.tmp`;
+      fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+      fs.renameSync(tempPath, this.dbPath);
       return true;
     } catch (err) {
       console.error('Error writing database file:', err);
