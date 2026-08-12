@@ -116,8 +116,8 @@ function sendIosPushNotification(title, body) {
 
 function createWindow() {
   db = new DatabaseService();
-  const settings = db.getSettings();
-  gemini = new GeminiService(settings.geminiApiKey || '');
+  const decryptedKey = db.getDecryptedApiKey();
+  gemini = new GeminiService(decryptedKey);
 
   const iconPath = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -331,7 +331,8 @@ function startReminderChecker() {
         const isTimeDue = (task.dueDate < currentDateStr) || (task.dueDate === currentDateStr && taskTimeSec <= currentTimeStrSec);
 
         if (isTodayOrPastDate && isTimeDue) {
-          db.updateTask(task.id, { notified: true });
+          const claimedTask = db.claimTaskReminder(task.id);
+          if (!claimedTask) return;
 
           // Play Audio Chime if sound enabled
           if (soundOn) {
@@ -339,15 +340,15 @@ function startReminderChecker() {
           }
 
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('trigger-reminder', task);
+            mainWindow.webContents.send('trigger-reminder', claimedTask);
           }
 
           // Trigger Clean Windows Native Desktop Notification if notifications enabled
           if (notifOn) {
-            const priorityStr = (task.priority || 'medium').toUpperCase();
-            const timeStr = task.dueTime ? formatTime12Hour(task.dueTime) : '';
+            const priorityStr = (claimedTask.priority || 'medium').toUpperCase();
+            const timeStr = claimedTask.dueTime ? formatTime12Hour(claimedTask.dueTime) : '';
 
-            const notifTitle = task.title || 'Task Reminder';
+            const notifTitle = claimedTask.title || 'Task Reminder';
             const notifBody = `Time: ${timeStr} | Priority: ${priorityStr}`;
             
             sendWindowsToastNotification(notifTitle, notifBody);
@@ -415,17 +416,34 @@ ipcMain.handle('clear-completed-tasks', () => db.clearCompletedTasks());
 
 ipcMain.handle('clear-all-tasks', () => db.clearAllTasks());
 
-ipcMain.handle('get-settings', () => db.getSettings());
+function getSanitizedSettings() {
+  const settings = db.getSettings();
+  const hasKey = db.hasGeminiApiKey();
+  return {
+    assistantName: settings.assistantName || 'Nova',
+    theme: settings.theme || 'emerald',
+    soundEnabled: settings.soundEnabled !== false,
+    notificationsEnabled: settings.notificationsEnabled !== false,
+    ntfyTopic: settings.ntfyTopic || 'nova-my-tasks',
+    hasGeminiApiKey: hasKey,
+    geminiApiKey: '' // Raw API key NEVER exposed to renderer over IPC
+  };
+}
+
+ipcMain.handle('get-settings', () => getSanitizedSettings());
 
 ipcMain.handle('update-settings', (event, settings) => {
-  if (typeof settings !== 'object' || settings === null) return db.getSettings();
-  if (settings.geminiApiKey !== undefined && typeof settings.geminiApiKey === 'string') {
-    gemini.setApiKey(settings.geminiApiKey);
-  }
+  if (typeof settings !== 'object' || settings === null) return getSanitizedSettings();
+
+  const updated = db.updateSettings(settings);
+  const decryptedKey = db.getDecryptedApiKey();
+  gemini.setApiKey(decryptedKey);
+
   if (settings.ntfyTopic !== undefined && typeof settings.ntfyTopic === 'string' && ntfySubscriber) {
     ntfySubscriber.setTopic(settings.ntfyTopic);
   }
-  return db.updateSettings(settings);
+
+  return getSanitizedSettings();
 });
 
 // Gemini AI IPC Calls

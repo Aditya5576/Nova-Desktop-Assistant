@@ -247,20 +247,106 @@ class DatabaseService {
     return true;
   }
 
+  claimTaskReminder(id) {
+    const data = this.read();
+    const tasks = data.tasks || [];
+    const index = tasks.findIndex(t => t.id === id);
+    if (index !== -1) {
+      const task = tasks[index];
+      if (task.status === 'done' || task.notified) {
+        return null;
+      }
+      task.notified = true;
+      tasks[index] = task;
+      data.tasks = tasks;
+      this.write(data);
+      return task;
+    }
+    return null;
+  }
+
   getSettings() {
     const data = this.read();
-    const settings = data.settings || {};
+    let settings = data.settings || {};
+
+    let safeStorage = null;
+    try { safeStorage = require('electron').safeStorage; } catch (e) {}
+
+    // Backward-compatible migration: encrypt existing plaintext key
+    if (settings.geminiApiKey && settings.geminiApiKey.trim()) {
+      if (safeStorage && safeStorage.isEncryptionAvailable()) {
+        try {
+          const buffer = safeStorage.encryptString(settings.geminiApiKey.trim());
+          settings.geminiApiKeyEncrypted = buffer.toString('base64');
+          delete settings.geminiApiKey;
+          data.settings = settings;
+          this.write(data);
+        } catch (err) {
+          console.error('Failed to encrypt Gemini API key during migration:', err);
+        }
+      } else {
+        console.warn('Secure API key storage unavailable on this platform.');
+      }
+    }
+
     if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) {
       settings.ntfyTopic = 'nova-my-tasks';
     }
     return settings;
   }
 
+  getDecryptedApiKey() {
+    const settings = this.getSettings();
+
+    let safeStorage = null;
+    try { safeStorage = require('electron').safeStorage; } catch (e) {}
+
+    if (settings.geminiApiKeyEncrypted && safeStorage && safeStorage.isEncryptionAvailable()) {
+      try {
+        const buffer = Buffer.from(settings.geminiApiKeyEncrypted, 'base64');
+        return safeStorage.decryptString(buffer);
+      } catch (err) {
+        console.error('Failed to decrypt Gemini API key:', err);
+      }
+    }
+    return settings.geminiApiKey || '';
+  }
+
+  hasGeminiApiKey() {
+    const key = this.getDecryptedApiKey();
+    return Boolean(key && key.trim().length > 10);
+  }
+
   updateSettings(newSettings) {
     const data = this.read();
-    data.settings = { ...data.settings, ...newSettings };
+    const currentSettings = data.settings || {};
+    const updatedSettings = { ...currentSettings, ...newSettings };
+
+    let safeStorage = null;
+    try { safeStorage = require('electron').safeStorage; } catch (e) {}
+
+    if (newSettings.geminiApiKey !== undefined) {
+      const rawKey = (newSettings.geminiApiKey || '').trim();
+      if (!rawKey) {
+        delete updatedSettings.geminiApiKey;
+        delete updatedSettings.geminiApiKeyEncrypted;
+      } else if (safeStorage && safeStorage.isEncryptionAvailable()) {
+        try {
+          const buffer = safeStorage.encryptString(rawKey);
+          updatedSettings.geminiApiKeyEncrypted = buffer.toString('base64');
+          delete updatedSettings.geminiApiKey;
+        } catch (err) {
+          updatedSettings.geminiApiKey = rawKey;
+        }
+      } else {
+        console.warn('Secure API key storage unavailable on this platform.');
+        updatedSettings.geminiApiKey = rawKey;
+      }
+    }
+
+    data.settings = updatedSettings;
     this.write(data);
-    return data.settings;
+    return updatedSettings;
   }
 }
 

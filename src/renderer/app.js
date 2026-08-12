@@ -233,13 +233,15 @@ async function loadSettings() {
   if (themeSelectEl) themeSelectEl.value = activeTheme;
   document.body.setAttribute('data-theme', activeTheme);
 
-  if (apiKeyEl) apiKeyEl.value = settings.geminiApiKey || '';
+  if (apiKeyEl) {
+    apiKeyEl.value = settings.hasGeminiApiKey ? '••••••••••••••••' : '';
+  }
   if (iosTopicEl) iosTopicEl.value = settings.ntfyTopic || '';
   if (soundEl) soundEl.checked = settings.soundEnabled !== false;
   if (notifEl) notifEl.checked = settings.notificationsEnabled !== false;
 
   if (keyStatusEl) {
-    if (settings.geminiApiKey && settings.geminiApiKey.trim()) {
+    if (settings.hasGeminiApiKey) {
       keyStatusEl.textContent = 'Configured ✅';
       keyStatusEl.style.background = 'rgba(16, 185, 129, 0.2)';
       keyStatusEl.style.color = '#34d399';
