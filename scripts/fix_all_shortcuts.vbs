@@ -1,7 +1,9 @@
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-strAppDir = "c:\Users\adity\Desktop\MyAssist"
+strScriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+strAppDir = fso.GetParentFolderName(strScriptDir)
+
 strVbsLauncher = strAppDir & "\launch-silent.vbs"
 strIcon = strAppDir & "\assets\icon.ico"
 
@@ -33,7 +35,6 @@ FixShortcut(desktop)
 FixShortcut(startmenu)
 FixShortcut(taskbar)
 
-' If there's an old shortcut in Startup folder, update it too
 If fso.FileExists(startup) Then
     FixShortcut(startup)
 End If

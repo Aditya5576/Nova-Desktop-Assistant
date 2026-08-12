@@ -1,4 +1,4 @@
 @echo off
-cd /d "c:\Users\adity\Desktop\MyAssist"
+cd /d "%~dp0"
 wscript.exe "launch-silent.vbs"
 exit
