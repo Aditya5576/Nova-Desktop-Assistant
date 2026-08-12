@@ -8,3 +8,4 @@ scripts/tempShortcut.vbs
 myassist_tasks.json
 src/services/myassist_tasks.json
 .locks/
+dist/
