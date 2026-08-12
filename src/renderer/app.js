@@ -161,9 +161,18 @@ function initEventListeners() {
 
   const themeSelectEl = document.getElementById('setting-theme-select');
   if (themeSelectEl) {
-    themeSelectEl.addEventListener('change', () => {
+    themeSelectEl.addEventListener('change', async () => {
       const selectedTheme = themeSelectEl.value;
       document.body.setAttribute('data-theme', selectedTheme);
+      const updated = await window.myassist.updateSettings({ theme: selectedTheme });
+      settings = updated || settings;
+      const themeNames = {
+        emerald: 'Obsidian Emerald 🟢',
+        cyberpunk: 'Cyberpunk Neon ⚡',
+        sapphire: 'Midnight Sapphire 🌙',
+        carbon: 'Minimalist Carbon 🍃'
+      };
+      showToast(`🎨 Theme saved: ${themeNames[selectedTheme] || selectedTheme}`, 'success');
     });
   }
 
