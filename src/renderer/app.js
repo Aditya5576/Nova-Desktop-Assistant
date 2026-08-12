@@ -420,12 +420,12 @@ function renderTaskGroup(container, taskGroup, emptyMsg) {
     item.innerHTML = `
       <input type="checkbox" class="task-checkbox" data-id="${task.id}">
       <div class="task-content">
-        <div class="task-title">${task.title}</div>
+        <div class="task-title">${escapeHtml(task.title)}</div>
         <div class="task-meta">
-          <span class="category-tag">${task.category}</span>
+          <span class="category-tag">${escapeHtml(task.category)}</span>
           <span class="priority-tag priority-${task.priority}">${(task.priority || 'medium').toUpperCase()}</span>
           ${task.dueTime ? `<span>${formatTime12Hour(task.dueTime)}</span>` : ''}
-          ${task.recurring !== 'none' ? `<span class="recurring-tag">🔄 ${task.recurring}</span>` : ''}
+          ${task.recurring !== 'none' ? `<span class="recurring-tag">🔄 ${escapeHtml(task.recurring)}</span>` : ''}
         </div>
       </div>
       <div class="task-actions">
@@ -440,7 +440,7 @@ function renderTaskGroup(container, taskGroup, emptyMsg) {
   container.querySelectorAll('.task-checkbox').forEach(cb => {
     cb.addEventListener('change', async (e) => {
       const id = e.target.getAttribute('data-id');
-      await window.myassist.updateTask({ id, updates: { status: 'done' } });
+      await window.myassist.updateTask(id, { status: 'done' });
       playChimeSound();
       showToast('Task marked as completed! 🎉', 'success');
       loadTasks();
@@ -450,7 +450,7 @@ function renderTaskGroup(container, taskGroup, emptyMsg) {
   container.querySelectorAll('.snooze-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const id = e.target.getAttribute('data-id');
-      await window.myassist.snoozeTask({ id, minutes: 15 });
+      await window.myassist.snoozeTask(id, 15);
       showToast('Snoozed for 15 minutes ⏰', 'info');
       loadTasks();
     });
@@ -485,9 +485,9 @@ function renderHistoryLog() {
       <div class="history-info">
         <div class="check-icon">✓</div>
         <div>
-          <div class="task-title">${task.title}</div>
+          <div class="task-title">${escapeHtml(task.title)}</div>
           <div class="task-meta">
-            <span class="category-tag">${task.category}</span>
+            <span class="category-tag">${escapeHtml(task.category)}</span>
             <span>Logged: ${new Date(task.completedAt || task.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
         </div>
