@@ -1,6 +1,6 @@
 const path = require('path');
 const https = require('https');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const logger = require('./logger');
 
 class NotificationService {
@@ -9,8 +9,8 @@ class NotificationService {
   }
 
   playAudioChime() {
-    const cmd = `powershell -NoProfile -Command "[System.Media.SystemSounds]::Exclamation.Play()"`;
-    exec(cmd, () => {});
+    const args = ['-NoProfile', '-Command', '[System.Media.SystemSounds]::Exclamation.Play()'];
+    execFile('powershell.exe', args, () => {});
   }
 
   sendWindowsToast(title, body) {
@@ -19,14 +19,20 @@ class NotificationService {
 
     try {
       const scriptPath = path.join(this.scriptsDir, 'sendToast.ps1');
-      const psTitle = safeTitle.replace(/"/g, '`"');
-      const psBody = safeBody.replace(/"/g, '`"');
-      const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -Title "${psTitle}" -Body "${psBody}" -Topic "none"`;
-      exec(cmd, (err) => {
+      const args = [
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        '-Title', safeTitle,
+        '-Body', safeBody,
+        '-Topic', 'none'
+      ];
+
+      execFile('powershell.exe', args, (err) => {
         if (err) {
           logger.warn(`PowerShell Toast command exited with notice: ${err.message}`);
         } else {
-          logger.info(`PowerShell Toast dispatched successfully for "${safeTitle}"`);
+          logger.info(`PowerShell Toast dispatched successfully`);
         }
       });
     } catch (err) {

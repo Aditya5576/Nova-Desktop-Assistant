@@ -209,7 +209,7 @@ function createWindow() {
           mainWindow.webContents.send('task-added-from-iphone', newTask);
         }
 
-        notificationService.sendWindowsToast('📱 Task Received from iPhone', `"${newTask.title}"`);
+        notificationService.dispatchNotification('📱 Task Received from iPhone', `"${newTask.title}"`, db ? db.getSettings() : {});
       } catch (err) {
         logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
       }
