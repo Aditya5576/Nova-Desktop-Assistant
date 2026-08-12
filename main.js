@@ -121,7 +121,7 @@ function createWindow() {
   scheduler = new TaskSchedulerService();
   taskService = new TaskService(db, scheduler);
   notificationService = new NotificationService();
-  reminderService = new ReminderService(db, notificationService);
+  reminderService = new ReminderService(db, notificationService, scheduler);
 
   const decryptedKey = db.getDecryptedApiKey();
   gemini = new GeminiService(decryptedKey);

@@ -13,17 +13,25 @@ const appPaths = require('./appPaths');
  *   - The copy is skipped when the destination already exists and is identical
  *     to the source (to avoid unnecessary disk writes on every launch).
  *   - schtask names remain unchanged: MyAssist_Rem_<safeId>
+ *
+ * Test context guard:
+ *   - In test/Node runner context (process.env.NODE_ENV === 'test' or running test_runner.js),
+ *     TaskSchedulerService uses an in-memory mock registry so unit tests do NOT execute
+ *     real OS schtasks /Create commands against the host machine.
  */
 
 class TaskSchedulerService {
   constructor() {
-    // Runtime writable scripts directory — always in userData, never in install dir
     this.scriptsDir = appPaths.getRuntimeScriptsPath();
-    // Database path for informational purposes (actual path used by runTask.ps1
-    // is derived from its own location on disk, so no hardcoding needed here)
     this.dbPath = appPaths.getDatabasePath();
 
-    // Ensure the writable scripts directory exists
+    // Detect test execution context
+    this.isTestEnv = process.env.NODE_ENV === 'test' ||
+                     (process.argv && process.argv.some(arg => arg.includes('test_runner.js') || arg.includes('mocha')));
+
+    // Mock registry for test assertions without touching OS Task Scheduler
+    this.mockRegistry = new Map();
+
     if (!fs.existsSync(this.scriptsDir)) {
       try {
         fs.mkdirSync(this.scriptsDir, { recursive: true });
@@ -35,38 +43,20 @@ class TaskSchedulerService {
     this.ensureTaskRunnerScript();
   }
 
-  /**
-   * Deploy runTask.ps1 to the writable userData/scripts/ directory.
-   *
-   * Source (read-only):
-   *   - Production (packaged): process.resourcesPath/scripts/runTask.ps1
-   *   - Development / test:    project_root/scripts/runTask.ps1
-   *
-   * Destination (writable):
-   *   - userData/scripts/runTask.ps1   (always)
-   *
-   * The PowerShell script derives its database and lock paths from its own
-   * location ($MyInvocation.MyCommand.Path), so placing it in userData/scripts/
-   * makes it naturally resolve userData/myassist_tasks.json and userData/.locks/.
-   *
-   * The copy is skipped when source and destination have identical content.
-   */
   ensureTaskRunnerScript() {
     try {
       const destPath = path.join(this.scriptsDir, 'runTask.ps1');
       const srcPath = path.join(appPaths.getPackagedScriptsPath(), 'runTask.ps1');
 
-      // If source doesn't exist (rare edge case in unusual environments), warn and exit
       if (!fs.existsSync(srcPath)) {
         console.warn('[TaskScheduler] runTask.ps1 source not found at:', srcPath);
         return;
       }
 
-      // Skip copy when destination is already up to date
       if (fs.existsSync(destPath)) {
         const srcContent = fs.readFileSync(srcPath, 'utf-8');
         const destContent = fs.readFileSync(destPath, 'utf-8');
-        if (srcContent === destContent) return; // already current
+        if (srcContent === destContent) return;
       }
 
       fs.copyFileSync(srcPath, destPath);
@@ -76,13 +66,27 @@ class TaskSchedulerService {
     }
   }
 
+  /**
+   * Schedules a Windows OS Task for a pending task.
+   * Strictly enforces:
+   *   - task.status === 'pending'
+   *   - task.notified !== true
+   *   - task.reminder !== false
+   * If any of these are violated, removes the task if it exists.
+   */
   scheduleTask(task) {
     try {
-      if (!task || !task.id || !task.dueDate || task.status === 'done') return;
+      if (!task || !task.id || !task.dueDate) return;
 
       const taskId = String(task.id);
       const safeTaskNameId = taskId.replace(/[^a-zA-Z0-9_]/g, '_');
       const taskName = `MyAssist_Rem_${safeTaskNameId}`;
+
+      // Strict Guard: Do NOT schedule if done, already notified, or reminder disabled
+      if (task.status !== 'pending' || task.notified === true || task.reminder === false) {
+        this.removeTask(taskId);
+        return;
+      }
 
       const dateParts = String(task.dueDate).split('-');
       if (dateParts.length !== 3) return;
@@ -93,14 +97,23 @@ class TaskSchedulerService {
         schTime = `${schTime}:00`;
       }
 
-      // Format date as dd/MM/yyyy for Windows Task Scheduler
       const formattedDateStr = `${day}/${month}/${year}`;
-
-      // Always point schtask at the runtime (userData) copy of the script
       const runnerScript = path.join(this.scriptsDir, 'runTask.ps1');
       const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${runnerScript}" -Id "${taskId}"`;
 
-      // Remove previous task if exists, then create new OS task
+      if (this.isTestEnv) {
+        // Test context: update in-memory mock registry cleanly
+        this.mockRegistry.set(taskName, {
+          name: taskName,
+          id: taskId,
+          action: taskAction,
+          date: formattedDateStr,
+          time: schTime
+        });
+        return;
+      }
+
+      // Real OS Task Scheduler: Remove old task if exists, then create new OS task
       exec(`schtasks /Delete /TN "${taskName}" /F`, () => {
         const createCmd = `schtasks /Create /TN "${taskName}" /TR "${taskAction}" /SC ONCE /SD "${formattedDateStr}" /ST "${schTime}" /F`;
         exec(createCmd, (err, stdout, stderr) => {
@@ -118,20 +131,79 @@ class TaskSchedulerService {
 
   removeTask(id) {
     try {
+      if (!id) return;
       const safeTaskNameId = String(id).replace(/[^a-zA-Z0-9_]/g, '_');
       const taskName = `MyAssist_Rem_${safeTaskNameId}`;
-      exec(`schtasks /Delete /TN "${taskName}" /F`, () => {});
+      this.removeTaskByName(taskName);
     } catch (err) {
       console.error('Failed to delete Windows OS task:', err);
     }
   }
 
+  removeTaskByName(taskName) {
+    if (!taskName) return;
+
+    if (this.isTestEnv) {
+      this.mockRegistry.delete(taskName);
+      return;
+    }
+
+    exec(`schtasks /Delete /TN "${taskName}" /F`, () => {});
+  }
+
+  /**
+   * Full Idempotent Synchronization & Pruning Reconciliation.
+   *
+   * 1. Filters database tasks for valid active pending reminders (status === 'pending', !notified, reminder !== false).
+   * 2. Queries Windows Task Scheduler for all registered tasks matching MyAssist_Rem_*.
+   * 3. Unregisters any MyAssist_Rem_* OS task that is NOT in the active database list (cleans up stale/orphaned tasks).
+   * 4. Schedules/updates active pending tasks.
+   */
   syncAllPendingTasks(tasks = []) {
     try {
-      tasks.forEach(task => {
-        if (task.status === 'pending' && task.dueDate) {
-          this.scheduleTask(task);
+      const activePendingTasks = (tasks || []).filter(t =>
+        t && t.id && t.status === 'pending' && !t.notified && t.reminder !== false && t.dueDate
+      );
+
+      const activeTaskNames = new Set(
+        activePendingTasks.map(t => `MyAssist_Rem_${String(t.id).replace(/[^a-zA-Z0-9_]/g, '_')}`)
+      );
+
+      if (this.isTestEnv) {
+        // Test context: prune mock registry to match activeTaskNames, then schedule
+        for (const registeredName of Array.from(this.mockRegistry.keys())) {
+          if (!activeTaskNames.has(registeredName)) {
+            this.mockRegistry.delete(registeredName);
+          }
         }
+        activePendingTasks.forEach(task => this.scheduleTask(task));
+        return;
+      }
+
+      // Real OS Task Scheduler: Query existing MyAssist_Rem_* tasks
+      exec('schtasks /Query /FO CSV /NH', (err, stdout) => {
+        if (!err && stdout) {
+          const lines = stdout.split('\n');
+          lines.forEach(line => {
+            const parts = line.split(',');
+            if (parts.length > 0) {
+              const rawName = parts[0].replace(/"/g, '').trim();
+              // Extract basename if path included e.g. \MyAssist_Rem_xxx
+              const taskName = rawName.startsWith('\\') ? rawName.substring(1) : rawName;
+
+              if (taskName.startsWith('MyAssist_Rem_')) {
+                if (!activeTaskNames.has(taskName)) {
+                  this.removeTaskByName(taskName);
+                }
+              }
+            }
+          });
+        }
+
+        // Register active pending tasks
+        activePendingTasks.forEach(task => {
+          this.scheduleTask(task);
+        });
       });
     } catch (e) {
       console.error('Failed to sync pending tasks with Task Scheduler:', e);

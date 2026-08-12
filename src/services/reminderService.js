@@ -3,9 +3,10 @@ const NotificationService = require('./notificationService');
 const { getLocalDateString, getLocalTimeStringSec } = require('./nlpParser');
 
 class ReminderService {
-  constructor(dbService, notificationService) {
+  constructor(dbService, notificationService, schedulerService) {
     this.db = dbService || new DatabaseService();
     this.notifications = notificationService || new NotificationService();
+    this.scheduler = schedulerService || (this.db ? this.db.scheduler : null);
     this.reminderInterval = null;
   }
 
@@ -49,6 +50,11 @@ class ReminderService {
             // Atomic OS Lock Claim
             const claimedTask = this.db.claimTaskReminder(task.id);
             if (!claimedTask) return; // ALREADY_CLAIMED by runTask.ps1 or another process
+
+            // Immediately unregister OS Task to prevent Task Scheduler re-triggers
+            if (this.scheduler && typeof this.scheduler.removeTask === 'function') {
+              try { this.scheduler.removeTask(claimedTask.id); } catch (e) {}
+            }
 
             if (onReminderTriggered && typeof onReminderTriggered === 'function') {
               try { onReminderTriggered(claimedTask); } catch (e) {}

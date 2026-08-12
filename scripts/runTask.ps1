@@ -10,6 +10,14 @@ try {
     $dbPath = Join-Path $appDir "myassist_tasks.json"
     $locksDir = Join-Path $appDir ".locks"
 
+    $safeId = $Id -replace '[^a-zA-Z0-9_]', '_'
+    $taskName = "MyAssist_Rem_${safeId}"
+
+    # 1. Self-deletion: Immediately unregister own Windows Scheduled Task to prevent Task Scheduler re-triggers
+    try {
+        & schtasks.exe /Delete /TN "$taskName" /F 2>&1 | Out-Null
+    } catch {}
+
     if (-not (Test-Path $locksDir)) {
         New-Item -ItemType Directory -Path $locksDir -Force | Out-Null
     }
@@ -20,12 +28,11 @@ try {
     $task = $json.tasks | Where-Object { $_.id -eq $Id }
 
     # Strict Deduplication Guard: Exit if task does not exist, is marked done, or is ALREADY notified
-    if (-not $task -or $task.notified -eq $true -or $task.status -eq "done") {
+    if (-not $task -or $task.notified -eq $true -or $task.status -ne "pending") {
         exit
     }
 
-    # Cross-Process Atomic OS Kernel Lock File Claim
-    $safeId = $Id -replace '[^a-zA-Z0-9_]', '_'
+    # 2. Cross-Process Atomic OS Kernel Lock File Claim
     $lockPath = Join-Path $locksDir "claim_${safeId}.lock"
 
     $lockAcquired = $false
@@ -57,12 +64,26 @@ try {
         exit # ALREADY_CLAIMED by Electron main process
     }
 
-    # Mark as notified in Database immediately upon successful claim
-    # Write UTF-8 without BOM so Node.js JSON.parse can read the file without BOM syntax errors
+    # 3. Mark as notified in Database with Retry Write Loop
     $task.notified = $true
     $jsonStr = $json | ConvertTo-Json -Depth 10
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::WriteAllText($dbPath, $jsonStr, $utf8NoBom)
+
+    $written = $false
+    for ($i = 0; $i -lt 3; $i++) {
+        try {
+            [System.IO.File]::WriteAllText($dbPath, $jsonStr, $utf8NoBom)
+            $written = $true
+            break
+        } catch {
+            Start-Sleep -Milliseconds 100
+        }
+    }
+
+    # If database write failed after retries, abort notification dispatch to preserve invariant
+    if (-not $written) {
+        exit
+    }
 
     $title = if ($task.title) { $task.title } else { "Task Reminder" }
     $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
@@ -88,12 +109,12 @@ try {
     $soundOn = ($json.settings -and $json.settings.soundEnabled -ne $false)
     $notifOn = ($json.settings -and $json.settings.notificationsEnabled -ne $false)
 
-    # 1. Play Audio Sound if enabled
+    # 4. Play Audio Sound if enabled
     if ($soundOn) {
         try { [System.Media.SystemSounds]::Exclamation.Play() } catch {}
     }
 
-    # 2. Show Native Windows Toast Notification Banner if enabled
+    # 5. Show Native Windows Toast Notification Banner if enabled
     if ($notifOn) {
         try {
             [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
@@ -120,7 +141,7 @@ try {
             [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("com.nova.desktop").Show($toast)
         } catch {}
 
-        # 3. Dispatch Push Notification directly to iPhone 15 (via ntfy.sh) if enabled
+        # 6. Dispatch Push Notification directly to iPhone 15 (via ntfy.sh) if enabled
         if ($topic -and $topic -ne "none") {
             try {
                 $url = "https://ntfy.sh/${topic}"

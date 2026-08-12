@@ -11,7 +11,8 @@ const testFiles = [
   './tests/geminiSecurity.test.js',
   './tests/services.test.js',
   './tests/appPaths.test.js',
-  './tests/powershellSyntax.test.js'
+  './tests/powershellSyntax.test.js',
+  './tests/taskSchedulerDuplication.test.js'
 ];
 
 let totalTests = 0;
