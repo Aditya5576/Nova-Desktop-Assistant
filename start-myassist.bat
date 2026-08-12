@@ -1,4 +1,4 @@
 @echo off
 cd /d "c:\Users\adity\Desktop\MyAssist"
-start "" "node_modules\.bin\electron.cmd" .
+wscript.exe "launch-silent.vbs"
 exit

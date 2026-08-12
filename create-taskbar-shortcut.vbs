@@ -9,8 +9,8 @@ If Not fso.FolderExists(strTaskbar) Then
 End If
 
 Set oShortcut = WshShell.CreateShortcut(strTaskbar & "\Nova.lnk")
-oShortcut.TargetPath = "c:\Users\adity\Desktop\MyAssist\node_modules\.bin\electron.cmd"
-oShortcut.Arguments = "."
+oShortcut.TargetPath = "wscript.exe"
+oShortcut.Arguments = """c:\Users\adity\Desktop\MyAssist\launch-silent.vbs"""
 oShortcut.WorkingDirectory = "c:\Users\adity\Desktop\MyAssist"
 oShortcut.WindowStyle = 1
 oShortcut.IconLocation = "c:\Users\adity\Desktop\MyAssist\assets\icon.ico"
@@ -20,8 +20,8 @@ oShortcut.Save
 ' Also place shortcut in Start Menu Programs for instant pinning
 strStartMenu = WshShell.SpecialFolders("Programs")
 Set oStartShortcut = WshShell.CreateShortcut(strStartMenu & "\Nova.lnk")
-oStartShortcut.TargetPath = "c:\Users\adity\Desktop\MyAssist\node_modules\.bin\electron.cmd"
-oStartShortcut.Arguments = "."
+oStartShortcut.TargetPath = "wscript.exe"
+oStartShortcut.Arguments = """c:\Users\adity\Desktop\MyAssist\launch-silent.vbs"""
 oStartShortcut.WorkingDirectory = "c:\Users\adity\Desktop\MyAssist"
 oStartShortcut.WindowStyle = 1
 oStartShortcut.IconLocation = "c:\Users\adity\Desktop\MyAssist\assets\icon.ico"
