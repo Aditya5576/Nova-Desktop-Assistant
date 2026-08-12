@@ -135,8 +135,8 @@ function initEventListeners() {
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear task history, Aditya?')) {
-        await window.myassist.clearAllTasks();
+      if (confirm('Are you sure you want to clear completed task history, Aditya? (Active reminders will NOT be deleted)')) {
+        await window.myassist.clearCompletedTasks();
         showToast('Completed log cleared 🗑️', 'info');
         loadTasks();
       }
@@ -319,6 +319,16 @@ async function handleAiSummary() {
   }
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function addChatBubble(text, sender) {
   const chatHistory = document.getElementById('chat-feed') || document.getElementById('chat-history');
   if (!chatHistory) return;
@@ -332,7 +342,8 @@ function addChatBubble(text, sender) {
   bubble.appendChild(senderTitle);
 
   const content = document.createElement('div');
-  content.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  const safeText = escapeHtml(text);
+  content.innerHTML = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   bubble.appendChild(content);
 
   chatHistory.appendChild(bubble);
@@ -556,10 +567,14 @@ function showToast(message, type = 'info') {
     error: '⚠️'
   };
 
-  toast.innerHTML = `
-    <span>${iconMap[type] || '🔔'}</span>
-    <div>${message}</div>
-  `;
+  const iconSpan = document.createElement('span');
+  iconSpan.textContent = iconMap[type] || '🔔';
+  
+  const textDiv = document.createElement('div');
+  textDiv.textContent = message;
+
+  toast.appendChild(iconSpan);
+  toast.appendChild(textDiv);
 
   container.appendChild(toast);
 

@@ -213,6 +213,22 @@ class DatabaseService {
     return false;
   }
 
+  clearCompletedTasks() {
+    const data = this.read();
+    const existingTasks = data.tasks || [];
+    const completedTasks = existingTasks.filter(t => t.status === 'done' || t.type === 'completed');
+
+    completedTasks.forEach(task => {
+      try {
+        this.scheduler.removeTask(task.id);
+      } catch (e) {}
+    });
+
+    data.tasks = existingTasks.filter(t => t.status !== 'done' && t.type !== 'completed');
+    this.write(data);
+    return true;
+  }
+
   clearAllTasks() {
     const data = this.read();
     const existingTasks = data.tasks || [];
