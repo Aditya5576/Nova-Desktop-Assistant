@@ -364,26 +364,50 @@ function startReminderChecker() {
 // IPC Handlers
 ipcMain.handle('get-tasks', () => db.getTasks());
 
-ipcMain.handle('add-task', (event, taskData) => db.addTask(taskData));
+ipcMain.handle('add-task', (event, taskData) => {
+  if (typeof taskData !== 'object' || taskData === null) return null;
+  if (taskData.title && typeof taskData.title === 'string') {
+    taskData.title = taskData.title.slice(0, 500);
+  }
+  return db.addTask(taskData);
+});
 
-ipcMain.handle('parse-input', (event, inputStr) => parseTaskInput(inputStr));
+ipcMain.handle('parse-input', (event, inputStr) => {
+  if (typeof inputStr !== 'string') return null;
+  return parseTaskInput(inputStr.slice(0, 1000));
+});
 
 ipcMain.handle('update-task', (event, arg1, arg2) => {
+  let id = null;
+  let updates = null;
   if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
-    return db.updateTask(arg1.id, arg1.updates);
+    id = String(arg1.id);
+    updates = arg1.updates;
+  } else {
+    id = typeof arg1 === 'string' ? arg1 : null;
+    updates = arg2;
   }
-  return db.updateTask(arg1, arg2);
+  if (!id || typeof updates !== 'object' || updates === null) return null;
+  return db.updateTask(id, updates);
 });
 
 ipcMain.handle('snooze-task', (event, arg1, arg2) => {
+  let id = null;
+  let minutes = 15;
   if (typeof arg1 === 'object' && arg1 !== null && arg1.id) {
-    return db.snoozeTask(arg1.id, arg1.minutes);
+    id = String(arg1.id);
+    minutes = typeof arg1.minutes === 'number' ? arg1.minutes : 15;
+  } else {
+    id = typeof arg1 === 'string' ? arg1 : null;
+    minutes = typeof arg2 === 'number' ? arg2 : 15;
   }
-  return db.snoozeTask(arg1, arg2);
+  if (!id) return null;
+  return db.snoozeTask(id, minutes);
 });
 
 ipcMain.handle('delete-task', (event, idOrObj) => {
   const id = (typeof idOrObj === 'object' && idOrObj !== null) ? idOrObj.id : idOrObj;
+  if (typeof id !== 'string' || !id.trim()) return false;
   return db.deleteTask(id);
 });
 
@@ -394,10 +418,11 @@ ipcMain.handle('clear-all-tasks', () => db.clearAllTasks());
 ipcMain.handle('get-settings', () => db.getSettings());
 
 ipcMain.handle('update-settings', (event, settings) => {
-  if (settings.geminiApiKey !== undefined) {
+  if (typeof settings !== 'object' || settings === null) return db.getSettings();
+  if (settings.geminiApiKey !== undefined && typeof settings.geminiApiKey === 'string') {
     gemini.setApiKey(settings.geminiApiKey);
   }
-  if (settings.ntfyTopic !== undefined && ntfySubscriber) {
+  if (settings.ntfyTopic !== undefined && typeof settings.ntfyTopic === 'string' && ntfySubscriber) {
     ntfySubscriber.setTopic(settings.ntfyTopic);
   }
   return db.updateSettings(settings);
@@ -405,8 +430,9 @@ ipcMain.handle('update-settings', (event, settings) => {
 
 // Gemini AI IPC Calls
 ipcMain.handle('gemini-chat', async (event, userInput) => {
+  if (typeof userInput !== 'string' || !userInput.trim()) return "Please type a message, Aditya!";
   const tasks = db.getTasks();
-  return await gemini.assistantResponse(userInput, tasks);
+  return await gemini.assistantResponse(userInput.slice(0, 2000), tasks);
 });
 
 ipcMain.handle('gemini-summary', async () => {
