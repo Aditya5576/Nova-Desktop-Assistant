@@ -159,22 +159,32 @@ function initEventListeners() {
     });
   }
 
+  const themeSelectEl = document.getElementById('setting-theme-select');
+  if (themeSelectEl) {
+    themeSelectEl.addEventListener('change', () => {
+      const selectedTheme = themeSelectEl.value;
+      document.body.setAttribute('data-theme', selectedTheme);
+    });
+  }
+
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', async () => {
       const apiKey = document.getElementById('setting-gemini-key').value.trim();
       const iosTopic = document.getElementById('setting-ios-topic').value.trim();
       const soundEnabled = document.getElementById('setting-sound').checked;
       const notifEnabled = document.getElementById('setting-notif').checked;
+      const selectedTheme = themeSelectEl ? themeSelectEl.value : 'emerald';
 
       const updated = await window.myassist.updateSettings({
         geminiApiKey: apiKey,
         ntfyTopic: iosTopic,
         soundEnabled,
-        notificationsEnabled: notifEnabled
+        notificationsEnabled: notifEnabled,
+        theme: selectedTheme
       });
 
       settings = updated || {};
-      showToast('Settings saved successfully! 🔑', 'success');
+      showToast('Settings & UI Theme saved! 🎨', 'success');
       loadSettings();
     });
   }
@@ -208,6 +218,11 @@ async function loadSettings() {
   const soundEl = document.getElementById('setting-sound');
   const notifEl = document.getElementById('setting-notif');
   const keyStatusEl = document.getElementById('gemini-key-status');
+  const themeSelectEl = document.getElementById('setting-theme-select');
+
+  const activeTheme = settings.theme || 'emerald';
+  if (themeSelectEl) themeSelectEl.value = activeTheme;
+  document.body.setAttribute('data-theme', activeTheme);
 
   if (apiKeyEl) apiKeyEl.value = settings.geminiApiKey || '';
   if (iosTopicEl) iosTopicEl.value = settings.ntfyTopic || '';
