@@ -27,7 +27,13 @@ if (-not $Id) { exit }
 
 try {
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $dbPath = Join-Path (Split-Path -Parent $scriptDir) "myassist_tasks.json"
+    $appDir = Split-Path -Parent $scriptDir
+    $dbPath = Join-Path $appDir "myassist_tasks.json"
+    $locksDir = Join-Path $appDir ".locks"
+
+    if (-not (Test-Path $locksDir)) {
+        New-Item -ItemType Directory -Path $locksDir -Force | Out-Null
+    }
 
     if (-not (Test-Path $dbPath)) { exit }
 
@@ -38,6 +44,43 @@ try {
     if (-not $task -or $task.notified -eq $true -or $task.status -eq "done") {
         exit
     }
+
+    # Cross-Process Atomic OS Kernel Lock File Claim
+    $safeId = $Id -replace '[^a-zA-Z0-9_]', '_'
+    $lockPath = Join-Path $locksDir "claim_$safeId.lock"
+
+    $lockAcquired = $false
+    try {
+        $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+        $writer = New-Object System.IO.StreamWriter($stream)
+        $writer.WriteLine("PowerShell PID $PID at $(Get-Date -Format 'o')")
+        $writer.Close()
+        $stream.Close()
+        $lockAcquired = $true
+    } catch {
+        if (Test-Path $lockPath) {
+            $lastWrite = (Get-Item $lockPath).LastWriteTime
+            if ((Get-Date) - $lastWrite -gt [TimeSpan]::FromSeconds(60)) {
+                try {
+                    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+                    $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+                    $writer = New-Object System.IO.StreamWriter($stream)
+                    $writer.WriteLine("PowerShell Recovered PID $PID at $(Get-Date -Format 'o')")
+                    $writer.Close()
+                    $stream.Close()
+                    $lockAcquired = $true
+                } catch {}
+            }
+        }
+    }
+
+    if (-not $lockAcquired) {
+        exit # ALREADY_CLAIMED by Electron main process
+    }
+
+    # Mark as notified in Database immediately upon successful claim
+    $task.notified = $true
+    $json | ConvertTo-Json -Depth 10 | Set-Content $dbPath -Encoding UTF8
 
     $title = if ($task.title) { $task.title } else { "Task Reminder" }
     $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
@@ -74,12 +117,16 @@ try {
             [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
             [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
+            Add-Type -AssemblyName System.Security
+            $xmlTitle = [System.Security.SecurityElement]::Escape($title)
+            $xmlBody = [System.Security.SecurityElement]::Escape($body)
+
             $template = @"
 <toast>
   <visual>
     <binding template="ToastGeneric">
-      <text>$($title)</text>
-      <text>$($body)</text>
+      <text>$($xmlTitle)</text>
+      <text>$($xmlBody)</text>
     </binding>
   </visual>
 </toast>
@@ -100,10 +147,6 @@ try {
             } catch {}
         }
     }
-
-    # Mark as notified in Database
-    $task.notified = $true
-    $json | ConvertTo-Json -Depth 10 | Set-Content $dbPath -Encoding UTF8
 } catch {}
 `;
       fs.writeFileSync(runnerPs1, psContent, 'utf-8');

@@ -247,22 +247,66 @@ class DatabaseService {
     return true;
   }
 
+  getLocksDir() {
+    const locksDir = path.join(__dirname, '../../.locks');
+    if (!fs.existsSync(locksDir)) {
+      try { fs.mkdirSync(locksDir, { recursive: true }); } catch (e) {}
+    }
+    return locksDir;
+  }
+
   claimTaskReminder(id) {
+    if (!id) return null;
+    const safeId = String(id).replace(/[^a-zA-Z0-9_]/g, '_');
+    const lockPath = path.join(this.getLocksDir(), `claim_${safeId}.lock`);
+
+    // 1. Check in-memory DB status first
     const data = this.read();
     const tasks = data.tasks || [];
     const index = tasks.findIndex(t => t.id === id);
-    if (index !== -1) {
-      const task = tasks[index];
-      if (task.status === 'done' || task.notified) {
-        return null;
-      }
-      task.notified = true;
-      tasks[index] = task;
-      data.tasks = tasks;
-      this.write(data);
-      return task;
+    if (index === -1) return null;
+    const task = tasks[index];
+    if (task.status === 'done' || task.notified) {
+      return null;
     }
-    return null;
+
+    // 2. Cross-Process OS Kernel Lock Claim (Atomic wx open)
+    let lockAcquired = false;
+    try {
+      const fd = fs.openSync(lockPath, 'wx');
+      const lockContent = JSON.stringify({ pid: process.pid, time: Date.now() });
+      fs.writeFileSync(fd, lockContent, 'utf-8');
+      fs.closeSync(fd);
+      lockAcquired = true;
+    } catch (err) {
+      if (err.code === 'EEXIST') {
+        try {
+          const stats = fs.statSync(lockPath);
+          const ageMs = Date.now() - stats.mtimeMs;
+          if (ageMs > 60000) {
+            try { fs.unlinkSync(lockPath); } catch (e) {}
+            const fd = fs.openSync(lockPath, 'wx');
+            const lockContent = JSON.stringify({ pid: process.pid, time: Date.now(), recovered: true });
+            fs.writeFileSync(fd, lockContent, 'utf-8');
+            fs.closeSync(fd);
+            lockAcquired = true;
+          }
+        } catch (e) {
+          lockAcquired = false;
+        }
+      }
+    }
+
+    if (!lockAcquired) {
+      return null; // ALREADY_CLAIMED by PowerShell or another process
+    }
+
+    // 3. Mark notified in database
+    task.notified = true;
+    tasks[index] = task;
+    data.tasks = tasks;
+    this.write(data);
+    return task;
   }
 
   getSettings() {
@@ -272,11 +316,12 @@ class DatabaseService {
     let safeStorage = null;
     try { safeStorage = require('electron').safeStorage; } catch (e) {}
 
-    // Backward-compatible migration: encrypt existing plaintext key
+    // Legacy migration check: encrypt existing plaintext key if safeStorage is available
     if (settings.geminiApiKey && settings.geminiApiKey.trim()) {
+      const rawKey = settings.geminiApiKey.trim();
       if (safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
-          const buffer = safeStorage.encryptString(settings.geminiApiKey.trim());
+          const buffer = safeStorage.encryptString(rawKey);
           settings.geminiApiKeyEncrypted = buffer.toString('base64');
           delete settings.geminiApiKey;
           data.settings = settings;
@@ -285,8 +330,18 @@ class DatabaseService {
           console.error('Failed to encrypt Gemini API key during migration:', err);
         }
       } else {
-        console.warn('Secure API key storage unavailable on this platform.');
+        // Plaintext key exists but safeStorage unavailable: strip from disk and retain in memory only
+        this.inMemoryApiKey = rawKey;
+        delete settings.geminiApiKey;
+        data.settings = settings;
+        this.write(data);
+        console.warn('Secure API key storage unavailable on this platform. Key retained in memory for current session only.');
       }
+    }
+
+    // Hard guarantee: Plaintext key is NEVER stored in settings on disk
+    if (settings.geminiApiKey) {
+      delete settings.geminiApiKey;
     }
 
     if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) {
@@ -309,7 +364,9 @@ class DatabaseService {
         console.error('Failed to decrypt Gemini API key:', err);
       }
     }
-    return settings.geminiApiKey || '';
+
+    // Return session in-memory key if safeStorage is unavailable
+    return this.inMemoryApiKey || '';
   }
 
   hasGeminiApiKey() {
@@ -327,22 +384,28 @@ class DatabaseService {
 
     if (newSettings.geminiApiKey !== undefined) {
       const rawKey = (newSettings.geminiApiKey || '').trim();
+      delete updatedSettings.geminiApiKey; // NEVER persist plaintext geminiApiKey to disk
+
       if (!rawKey) {
-        delete updatedSettings.geminiApiKey;
         delete updatedSettings.geminiApiKeyEncrypted;
+        this.inMemoryApiKey = '';
       } else if (safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
           const buffer = safeStorage.encryptString(rawKey);
           updatedSettings.geminiApiKeyEncrypted = buffer.toString('base64');
-          delete updatedSettings.geminiApiKey;
+          this.inMemoryApiKey = rawKey;
         } catch (err) {
-          updatedSettings.geminiApiKey = rawKey;
+          console.error('Encryption error:', err);
+          this.inMemoryApiKey = rawKey;
         }
       } else {
-        console.warn('Secure API key storage unavailable on this platform.');
-        updatedSettings.geminiApiKey = rawKey;
+        console.warn('Secure API key storage unavailable on this platform. Key retained in memory for current session only.');
+        this.inMemoryApiKey = rawKey;
       }
     }
+
+    // Guarantee no plaintext key field written to JSON file
+    delete updatedSettings.geminiApiKey;
 
     data.settings = updatedSettings;
     this.write(data);
