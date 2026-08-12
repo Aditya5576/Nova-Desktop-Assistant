@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const DatabaseService = require('../src/services/database');
 
-describe('Gemini API Key safeStorage Security Test Suite', () => {
+describe('Gemini API Key safeStorage & Zero-Plaintext Storage Test Suite', () => {
   let db;
   const testDbPath = path.join(__dirname, '../scratch/test_gemini_db.json');
 
@@ -22,37 +22,41 @@ describe('Gemini API Key safeStorage Security Test Suite', () => {
     }
   });
 
-  it('should migrate plaintext geminiApiKey to geminiApiKeyEncrypted or store safely', () => {
-    // Write raw plaintext key to test DB
-    const initial = {
+  it('should never persist raw plaintext geminiApiKey to disk file', () => {
+    db.updateSettings({ geminiApiKey: 'AIzaSyTestApiKey1234567890' });
+
+    // Read raw JSON directly from disk
+    const rawDisk = JSON.parse(fs.readFileSync(testDbPath, 'utf-8'));
+    assert.strictEqual(rawDisk.settings.geminiApiKey, undefined, 'Plaintext geminiApiKey MUST NEVER be persisted to disk');
+    assert(db.hasGeminiApiKey(), 'Key must be accessible via safeStorage or in-memory session');
+  });
+
+  it('should migrate legacy plaintext key and purge plaintext field from disk file', () => {
+    const legacy = {
       tasks: [],
-      settings: { geminiApiKey: 'AIzaSyMockPlaintextKey123456789' }
+      settings: { geminiApiKey: 'AIzaSyLegacyPlaintextKey123' }
     };
-    fs.writeFileSync(testDbPath, JSON.stringify(initial, null, 2), 'utf-8');
+    fs.writeFileSync(testDbPath, JSON.stringify(legacy, null, 2), 'utf-8');
 
-    const settings = db.getSettings();
-    assert(db.hasGeminiApiKey(), 'Database must recognize that API key exists');
+    // Running getSettings triggers legacy migration check
+    db.getSettings();
 
-    // Confirm that getSettings() sanitizes and does not expose plaintext key directly to renderer
-    const rawRead = db.read();
-    if (rawRead.settings.geminiApiKeyEncrypted) {
-      assert.strictEqual(rawRead.settings.geminiApiKey, undefined, 'Plaintext key must be deleted after encryption');
-    }
+    const rawDisk = JSON.parse(fs.readFileSync(testDbPath, 'utf-8'));
+    assert.strictEqual(rawDisk.settings.geminiApiKey, undefined, 'Legacy plaintext key field must be purged from disk file');
+    assert(db.hasGeminiApiKey());
   });
 
-  it('should handle missing API key cleanly', () => {
-    db.updateSettings({ geminiApiKey: '' });
-    assert.strictEqual(db.hasGeminiApiKey(), false);
-    assert.strictEqual(db.getDecryptedApiKey(), '');
-  });
-
-  it('should allow clearing an existing key', () => {
-    db.updateSettings({ geminiApiKey: 'AIzaSyMockPlaintextKey123456789' });
+  it('should handle missing or cleared API key cleanly', () => {
+    db.updateSettings({ geminiApiKey: 'AIzaSyTestApiKey1234567890' });
     assert.strictEqual(db.hasGeminiApiKey(), true);
 
     db.updateSettings({ geminiApiKey: '' });
     assert.strictEqual(db.hasGeminiApiKey(), false);
     assert.strictEqual(db.getDecryptedApiKey(), '');
+
+    const rawDisk = JSON.parse(fs.readFileSync(testDbPath, 'utf-8'));
+    assert.strictEqual(rawDisk.settings.geminiApiKey, undefined);
+    assert.strictEqual(rawDisk.settings.geminiApiKeyEncrypted, undefined);
   });
 
   it('should sanitize settings object so decrypted key is never exposed over IPC to renderer', () => {
