@@ -60,15 +60,21 @@ try {
         $topic = $json.settings.ntfyTopic.Trim()
     }
 
-    # 1. Play Audio Sound
-    [System.Media.SystemSounds]::Exclamation.Play()
+    $soundOn = ($json.settings -and $json.settings.soundEnabled -ne $false)
+    $notifOn = ($json.settings -and $json.settings.notificationsEnabled -ne $false)
 
-    # 2. Show Native Windows Toast Notification Banner
-    try {
-        [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-        [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+    # 1. Play Audio Sound if enabled
+    if ($soundOn) {
+        try { [System.Media.SystemSounds]::Exclamation.Play() } catch {}
+    }
 
-        $template = @"
+    # 2. Show Native Windows Toast Notification Banner if enabled
+    if ($notifOn) {
+        try {
+            [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+            [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+
+            $template = @"
 <toast>
   <visual>
     <binding template="ToastGeneric">
@@ -78,20 +84,21 @@ try {
   </visual>
 </toast>
 "@
-        $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-        $xml.LoadXml($template)
-        $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-        $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(10)
-        [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("com.nova.desktop").Show($toast)
-    } catch {}
-
-    # 3. Dispatch Push Notification directly to iPhone 15 (via ntfy.sh)
-    if ($topic -and $topic -ne "none") {
-        try {
-            $url = "https://ntfy.sh/$topic"
-            $safeTitle = $title -replace '[^\x00-\x7F]', ''
-            Invoke-RestMethod -Uri $url -Method Post -Body $body -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell,alarm_clock" } -ErrorAction SilentlyContinue
+            $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+            $xml.LoadXml($template)
+            $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+            $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(10)
+            [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("com.nova.desktop").Show($toast)
         } catch {}
+
+        # 3. Dispatch Push Notification directly to iPhone 15 (via ntfy.sh) if enabled
+        if ($topic -and $topic -ne "none") {
+            try {
+                $url = "https://ntfy.sh/$topic"
+                $safeTitle = $title -replace '[^\x00-\x7F]', ''
+                Invoke-RestMethod -Uri $url -Method Post -Body $body -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell,alarm_clock" } -ErrorAction SilentlyContinue
+            } catch {}
+        }
     }
 
     # Mark as notified in Database
