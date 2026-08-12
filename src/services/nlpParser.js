@@ -132,26 +132,26 @@ function parseTaskInput(inputStr) {
     lower = lower.replace(wordRegex, `in ${num}`);
   }
 
-  // PARSE DECIMAL & INTEGER RELATIVE TIMING: "in 10 secs", "in 1.1 mins", "in 2 sec", "in three seconds"
-  const relSecMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second|s)\b/i);
-  const relMinMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(mins|min|minutes|minute|m)\b/i);
-  const relHourMatch = lower.match(/\bin\s+(\d+(?:\.\d+)?)\s*(hrs|hr|hours|hour|h)\b/i);
+  // PARSE DECIMAL & INTEGER RELATIVE TIMING: "3 sec", "in 10 secs", "in 1.1 mins", "after 2 min", "in three seconds"
+  const relSecMatch = lower.match(/(?:in|after)?\s*(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second)\b/i) || lower.match(/\b(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second)\b/i);
+  const relMinMatch = lower.match(/(?:in|after)?\s*(\d+(?:\.\d+)?)\s*(mins|min|minutes|minute)\b/i) || lower.match(/\b(\d+(?:\.\d+)?)\s*(mins|min|minutes|minute)\b/i);
+  const relHourMatch = lower.match(/(?:in|after)?\s*(\d+(?:\.\d+)?)\s*(hrs|hr|hours|hour)\b/i) || lower.match(/\b(\d+(?:\.\d+)?)\s*(hrs|hr|hours|hour)\b/i);
 
   if (relSecMatch) {
     const addSecs = parseFloat(relSecMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addSecs * 1000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(secs|sec|seconds|second|s)\b/gi, '').trim();
+    title = title.replace(/(?:in|after)?\s*\d+(?:\.\d+)?\s*(secs|sec|seconds|second)\b/gi, '').trim();
   } else if (relMinMatch) {
     const addMins = parseFloat(relMinMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addMins * 60000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(mins|min|minutes|minute|m)\b/gi, '').trim();
+    title = title.replace(/(?:in|after)?\s*\d+(?:\.\d+)?\s*(mins|min|minutes|minute)\b/gi, '').trim();
   } else if (relHourMatch) {
     const addHours = parseFloat(relHourMatch[1]);
     targetDate = new Date(now.getTime() + Math.round(addHours * 3600000));
     dueTime = getLocalTimeStringSec(targetDate);
-    title = title.replace(/\bin\s+\d+(?:\.\d+)?\s*(hrs|hr|hours|hour|h)\b/gi, '').trim();
+    title = title.replace(/(?:in|after)?\s*\d+(?:\.\d+)?\s*(hrs|hr|hours|hour)\b/gi, '').trim();
   }
 
   // 7. PARSE ABSOLUTE TIME if relative not set
