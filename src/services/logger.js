@@ -1,20 +1,35 @@
 const fs = require('fs');
 const path = require('path');
+const appPaths = require('./appPaths');
 
+/**
+ * Logger — writes timestamped log lines to console and to a file under userData/logs/.
+ *
+ * Path resolution is intentionally lazy: the log directory is only resolved
+ * and created on the first write. This allows the singleton to be imported
+ * before Electron app.getPath() is available (e.g. at module-load time in
+ * main.js) without triggering premature path resolution.
+ */
 class Logger {
   constructor() {
-    this.logDir = path.join(__dirname, '../../logs');
-    this.logFile = path.join(this.logDir, 'nova-app.log');
-    this.ensureLogDir();
+    // Paths are resolved lazily on first write so Electron app can be ready.
+    this._ready = false;
+    this.logDir = null;
+    this.logFile = null;
   }
 
-  ensureLogDir() {
+  _ensureReady() {
+    if (this._ready) return;
+    this._ready = true;
+    this.logDir = appPaths.getLogsPath();
+    this.logFile = path.join(this.logDir, 'nova-app.log');
     try {
       if (!fs.existsSync(this.logDir)) {
         fs.mkdirSync(this.logDir, { recursive: true });
       }
     } catch (e) {
       console.error('Failed to create log directory:', e);
+      this.logFile = null; // disable file logging if dir is inaccessible
     }
   }
 
@@ -25,12 +40,15 @@ class Logger {
   }
 
   log(level, message, meta = null) {
+    this._ensureReady();
     const formatted = this.formatMessage(level, message, meta);
     console.log(formatted.trim());
-    try {
-      fs.appendFileSync(this.logFile, formatted, 'utf-8');
-    } catch (e) {
-      console.error('Failed to write to log file:', e);
+    if (this.logFile) {
+      try {
+        fs.appendFileSync(this.logFile, formatted, 'utf-8');
+      } catch (e) {
+        console.error('Failed to write to log file:', e);
+      }
     }
   }
 

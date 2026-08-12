@@ -2,10 +2,14 @@ const path = require('path');
 const https = require('https');
 const { execFile } = require('child_process');
 const logger = require('./logger');
+const appPaths = require('./appPaths');
 
 class NotificationService {
   constructor() {
-    this.scriptsDir = path.join(__dirname, '../../scripts');
+    // sendToast.ps1 is a read-only packaged resource.
+    // getPackagedScriptsPath() returns process.resourcesPath/scripts in production
+    // and project_root/scripts in development / test context.
+    this.scriptsDir = appPaths.getPackagedScriptsPath();
   }
 
   playAudioChime() {

@@ -1,16 +1,41 @@
 const fs = require('fs');
 const path = require('path');
 const TaskSchedulerService = require('./taskSchedulerService');
+const appPaths = require('./appPaths');
 
 class DatabaseService {
   constructor() {
-    this.dbPath = path.join(__dirname, '../../myassist_tasks.json');
+    this.dbPath = appPaths.getDatabasePath();
     this.scheduler = new TaskSchedulerService();
     this.init();
   }
 
   init() {
     try {
+      // ── One-time migration: copy DB from legacy project-root location to userData ──
+      // Guards:
+      //  1. this.dbPath must be the canonical userData DB (not a test scratch override)
+      //  2. the userData DB must not yet exist
+      //  3. the legacy project-root DB must exist at a different path
+      // The old file is never deleted — migration only copies.
+      const legacyPath = path.join(__dirname, '../../myassist_tasks.json');
+      const isCanonicalPath = this.dbPath === appPaths.getDatabasePath();
+      if (isCanonicalPath && !fs.existsSync(this.dbPath) && legacyPath !== this.dbPath && fs.existsSync(legacyPath)) {
+        try {
+          const destDir = path.dirname(this.dbPath);
+          if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+          fs.copyFileSync(legacyPath, this.dbPath);
+          console.log('[Nova] User database migrated from legacy project location to userData directory.');
+        } catch (migErr) {
+          console.error('[Nova] Migration failed — starting with a fresh database:', migErr.message);
+          // Fall through: the main init block below will create a fresh database
+        }
+      }
+
+      // Ensure userData directory exists for writes
+      const dbDir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+
       if (!fs.existsSync(this.dbPath)) {
         const initialData = {
           tasks: [
@@ -248,7 +273,7 @@ class DatabaseService {
   }
 
   getLocksDir() {
-    const locksDir = path.join(__dirname, '../../.locks');
+    const locksDir = appPaths.getLocksPath();
     if (!fs.existsSync(locksDir)) {
       try { fs.mkdirSync(locksDir, { recursive: true }); } catch (e) {}
     }

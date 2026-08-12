@@ -1,157 +1,78 @@
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const appPaths = require('./appPaths');
 
 /**
  * Windows Task Scheduler Service (Production 100% Closed-App Verification)
+ *
+ * Runtime script strategy:
+ *   - runTask.ps1 is a static committed file (packaged as extraResources).
+ *   - On startup, it is COPIED to userData/scripts/ so schtasks always points
+ *     to a writable, user-owned location — never to Program Files or app.asar.
+ *   - The copy is skipped when the destination already exists and is identical
+ *     to the source (to avoid unnecessary disk writes on every launch).
+ *   - schtask names remain unchanged: MyAssist_Rem_<safeId>
  */
 
 class TaskSchedulerService {
   constructor() {
-    this.scriptsDir = path.join(__dirname, '../../scripts');
-    this.dbPath = path.join(__dirname, '../../myassist_tasks.json');
+    // Runtime writable scripts directory — always in userData, never in install dir
+    this.scriptsDir = appPaths.getRuntimeScriptsPath();
+    // Database path for informational purposes (actual path used by runTask.ps1
+    // is derived from its own location on disk, so no hardcoding needed here)
+    this.dbPath = appPaths.getDatabasePath();
+
+    // Ensure the writable scripts directory exists
     if (!fs.existsSync(this.scriptsDir)) {
-      fs.mkdirSync(this.scriptsDir, { recursive: true });
+      try {
+        fs.mkdirSync(this.scriptsDir, { recursive: true });
+      } catch (err) {
+        console.error('[TaskScheduler] Failed to create runtime scripts directory:', err.message);
+      }
     }
+
     this.ensureTaskRunnerScript();
   }
 
+  /**
+   * Deploy runTask.ps1 to the writable userData/scripts/ directory.
+   *
+   * Source (read-only):
+   *   - Production (packaged): process.resourcesPath/scripts/runTask.ps1
+   *   - Development / test:    project_root/scripts/runTask.ps1
+   *
+   * Destination (writable):
+   *   - userData/scripts/runTask.ps1   (always)
+   *
+   * The PowerShell script derives its database and lock paths from its own
+   * location ($MyInvocation.MyCommand.Path), so placing it in userData/scripts/
+   * makes it naturally resolve userData/myassist_tasks.json and userData/.locks/.
+   *
+   * The copy is skipped when source and destination have identical content.
+   */
   ensureTaskRunnerScript() {
     try {
-      const runnerPs1 = path.join(this.scriptsDir, 'runTask.ps1');
-      const psContent = `param (
-    [string]$Id = ""
-)
+      const destPath = path.join(this.scriptsDir, 'runTask.ps1');
+      const srcPath = path.join(appPaths.getPackagedScriptsPath(), 'runTask.ps1');
 
-if (-not $Id) { exit }
+      // If source doesn't exist (rare edge case in unusual environments), warn and exit
+      if (!fs.existsSync(srcPath)) {
+        console.warn('[TaskScheduler] runTask.ps1 source not found at:', srcPath);
+        return;
+      }
 
-try {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $appDir = Split-Path -Parent $scriptDir
-    $dbPath = Join-Path $appDir "myassist_tasks.json"
-    $locksDir = Join-Path $appDir ".locks"
+      // Skip copy when destination is already up to date
+      if (fs.existsSync(destPath)) {
+        const srcContent = fs.readFileSync(srcPath, 'utf-8');
+        const destContent = fs.readFileSync(destPath, 'utf-8');
+        if (srcContent === destContent) return; // already current
+      }
 
-    if (-not (Test-Path $locksDir)) {
-        New-Item -ItemType Directory -Path $locksDir -Force | Out-Null
-    }
-
-    if (-not (Test-Path $dbPath)) { exit }
-
-    $json = Get-Content $dbPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $task = $json.tasks | Where-Object { $_.id -eq $Id }
-
-    # Strict Deduplication Guard: Exit if task does not exist, is marked done, or is ALREADY notified
-    if (-not $task -or $task.notified -eq $true -or $task.status -eq "done") {
-        exit
-    }
-
-    # Cross-Process Atomic OS Kernel Lock File Claim
-    $safeId = $Id -replace '[^a-zA-Z0-9_]', '_'
-    $lockPath = Join-Path $locksDir "claim_$safeId.lock"
-
-    $lockAcquired = $false
-    try {
-        $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-        $writer = New-Object System.IO.StreamWriter($stream)
-        $writer.WriteLine("PowerShell PID $PID at $(Get-Date -Format 'o')")
-        $writer.Close()
-        $stream.Close()
-        $lockAcquired = $true
-    } catch {
-        if (Test-Path $lockPath) {
-            $lastWrite = (Get-Item $lockPath).LastWriteTime
-            if ((Get-Date) - $lastWrite -gt [TimeSpan]::FromSeconds(60)) {
-                try {
-                    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
-                    $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-                    $writer = New-Object System.IO.StreamWriter($stream)
-                    $writer.WriteLine("PowerShell Recovered PID $PID at $(Get-Date -Format 'o')")
-                    $writer.Close()
-                    $stream.Close()
-                    $lockAcquired = $true
-                } catch {}
-            }
-        }
-    }
-
-    if (-not $lockAcquired) {
-        exit # ALREADY_CLAIMED by Electron main process
-    }
-
-    # Mark as notified in Database immediately upon successful claim
-    $task.notified = $true
-    $json | ConvertTo-Json -Depth 10 | Set-Content $dbPath -Encoding UTF8
-
-    $title = if ($task.title) { $task.title } else { "Task Reminder" }
-    $priority = if ($task.priority) { $task.priority.ToUpper() } else { "MEDIUM" }
-    $timeStr = ""
-    if ($task.dueTime) {
-        $tParts = $task.dueTime.ToString().Split(':')
-        if ($tParts.Length -ge 2) {
-            $h = [int]$tParts[0]
-            $m = $tParts[1]
-            $ampm = if ($h -ge 12) { "PM" } else { "AM" }
-            $h12 = if ($h % 12 -eq 0) { 12 } else { $h % 12 }
-            $timeStr = "$h12:$m $ampm"
-        }
-    }
-
-    $body = "Time: $timeStr | Priority: $priority"
-
-    $topic = "nova-my-tasks"
-    if ($json.settings -and $json.settings.ntfyTopic -and $json.settings.ntfyTopic.Trim()) {
-        $topic = $json.settings.ntfyTopic.Trim()
-    }
-
-    $soundOn = ($json.settings -and $json.settings.soundEnabled -ne $false)
-    $notifOn = ($json.settings -and $json.settings.notificationsEnabled -ne $false)
-
-    # 1. Play Audio Sound if enabled
-    if ($soundOn) {
-        try { [System.Media.SystemSounds]::Exclamation.Play() } catch {}
-    }
-
-    # 2. Show Native Windows Toast Notification Banner if enabled
-    if ($notifOn) {
-        try {
-            [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-            [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-
-            Add-Type -AssemblyName System.Security
-            $xmlTitle = [System.Security.SecurityElement]::Escape($title)
-            $xmlBody = [System.Security.SecurityElement]::Escape($body)
-
-            $template = @"
-<toast>
-  <visual>
-    <binding template="ToastGeneric">
-      <text>$($xmlTitle)</text>
-      <text>$($xmlBody)</text>
-    </binding>
-  </visual>
-</toast>
-"@
-            $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-            $xml.LoadXml($template)
-            $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-            $toast.ExpirationTime = [System.DateTimeOffset]::Now.AddMinutes(10)
-            [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("com.nova.desktop").Show($toast)
-        } catch {}
-
-        # 3. Dispatch Push Notification directly to iPhone 15 (via ntfy.sh) if enabled
-        if ($topic -and $topic -ne "none") {
-            try {
-                $url = "https://ntfy.sh/$topic"
-                $safeTitle = $title -replace '[^\x00-\x7F]', ''
-                Invoke-RestMethod -Uri $url -Method Post -Body $body -Headers @{ "Title" = "$safeTitle"; "Priority" = "high"; "Tags" = "bell,alarm_clock" } -ErrorAction SilentlyContinue
-            } catch {}
-        }
-    }
-} catch {}
-`;
-      fs.writeFileSync(runnerPs1, psContent, 'utf-8');
+      fs.copyFileSync(srcPath, destPath);
+      console.log('[TaskScheduler] runTask.ps1 deployed to userData runtime scripts directory.');
     } catch (err) {
-      console.error('Failed to create runTask script:', err);
+      console.error('[TaskScheduler] Failed to deploy runTask.ps1:', err.message);
     }
   }
 
@@ -175,6 +96,7 @@ try {
       // Format date as dd/MM/yyyy for Windows Task Scheduler
       const formattedDateStr = `${day}/${month}/${year}`;
 
+      // Always point schtask at the runtime (userData) copy of the script
       const runnerScript = path.join(this.scriptsDir, 'runTask.ps1');
       const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${runnerScript}" -Id "${taskId}"`;
 
