@@ -986,6 +986,31 @@ select.text-input option {
   padding: 8px;
 }
 
+.theme-chip-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.theme-chip-btn:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: var(--accent-green);
+  transform: translateY(-1px);
+}
+
+.theme-chip-btn.active {
+  background: rgba(16, 185, 129, 0.28);
+  border: 2px solid var(--accent-green);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
 .text-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }

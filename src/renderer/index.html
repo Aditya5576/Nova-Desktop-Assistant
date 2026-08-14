@@ -185,14 +185,32 @@
             <div class="settings-card">
               <h3>🎨 Appearance & UI Theme</h3>
               <div class="setting-item">
-                <label for="setting-theme-select">Select Application Theme:</label>
-                <select id="setting-theme-select" class="text-input" style="width: 100%; cursor: pointer;">
-                  <option value="emerald">🟢 Obsidian Emerald (Default)</option>
-                  <option value="cyberpunk">⚡ Cyberpunk Neon (Cyan & Violet)</option>
-                  <option value="sapphire">🌙 Midnight Sapphire (Slate & Gold)</option>
-                  <option value="carbon">🍃 Minimalist Carbon (Pure Black & Mint)</option>
+                <label>Select Application Theme:</label>
+                <div class="theme-options-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; margin-bottom: 10px;">
+                  <button type="button" class="theme-chip-btn active" data-theme-val="emerald">
+                    <span style="font-size: 1.1rem;">🟢</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: #ffffff;">Obsidian Emerald</span>
+                  </button>
+                  <button type="button" class="theme-chip-btn" data-theme-val="cyberpunk">
+                    <span style="font-size: 1.1rem;">⚡</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: #ffffff;">Cyberpunk Neon</span>
+                  </button>
+                  <button type="button" class="theme-chip-btn" data-theme-val="sapphire">
+                    <span style="font-size: 1.1rem;">🌙</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: #ffffff;">Midnight Sapphire</span>
+                  </button>
+                  <button type="button" class="theme-chip-btn" data-theme-val="carbon">
+                    <span style="font-size: 1.1rem;">🍃</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: #ffffff;">Minimalist Carbon</span>
+                  </button>
+                </div>
+                <select id="setting-theme-select" class="text-input" style="width: 100%; cursor: pointer; background-color: #111827 !important; color: #ffffff !important;">
+                  <option value="emerald" style="background-color: #111827 !important; color: #ffffff !important;">🟢 Obsidian Emerald (Default)</option>
+                  <option value="cyberpunk" style="background-color: #111827 !important; color: #ffffff !important;">⚡ Cyberpunk Neon (Cyan & Violet)</option>
+                  <option value="sapphire" style="background-color: #111827 !important; color: #ffffff !important;">🌙 Midnight Sapphire (Slate & Gold)</option>
+                  <option value="carbon" style="background-color: #111827 !important; color: #ffffff !important;">🍃 Minimalist Carbon (Pure Black & Mint)</option>
                 </select>
-                <p class="setting-desc" style="margin-top: 6px;">Instantly updates Nova's color scheme, glows, and chat bubble aesthetics!</p>
+                <p class="setting-desc" style="margin-top: 8px;">Click any theme card or dropdown above to instantly switch Nova's colors!</p>
               </div>
             </div>
 

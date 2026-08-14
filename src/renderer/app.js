@@ -160,19 +160,37 @@ function initEventListeners() {
   }
 
   const themeSelectEl = document.getElementById('setting-theme-select');
+  const themeBtns = document.querySelectorAll('.theme-chip-btn');
+
+  const applyAndSaveTheme = async (selectedTheme) => {
+    document.body.setAttribute('data-theme', selectedTheme);
+    if (themeSelectEl) themeSelectEl.value = selectedTheme;
+    themeBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme-val') === selectedTheme);
+    });
+
+    const updated = await window.myassist.updateSettings({ theme: selectedTheme });
+    settings = updated || settings;
+
+    const themeNames = {
+      emerald: 'Obsidian Emerald 🟢',
+      cyberpunk: 'Cyberpunk Neon ⚡',
+      sapphire: 'Midnight Sapphire 🌙',
+      carbon: 'Minimalist Carbon 🍃'
+    };
+    showToast(`🎨 Theme saved: ${themeNames[selectedTheme] || selectedTheme}`, 'success');
+  };
+
+  themeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.getAttribute('data-theme-val');
+      applyAndSaveTheme(val);
+    });
+  });
+
   if (themeSelectEl) {
-    themeSelectEl.addEventListener('change', async () => {
-      const selectedTheme = themeSelectEl.value;
-      document.body.setAttribute('data-theme', selectedTheme);
-      const updated = await window.myassist.updateSettings({ theme: selectedTheme });
-      settings = updated || settings;
-      const themeNames = {
-        emerald: 'Obsidian Emerald 🟢',
-        cyberpunk: 'Cyberpunk Neon ⚡',
-        sapphire: 'Midnight Sapphire 🌙',
-        carbon: 'Minimalist Carbon 🍃'
-      };
-      showToast(`🎨 Theme saved: ${themeNames[selectedTheme] || selectedTheme}`, 'success');
+    themeSelectEl.addEventListener('change', () => {
+      applyAndSaveTheme(themeSelectEl.value);
     });
   }
 
@@ -232,6 +250,11 @@ async function loadSettings() {
   const activeTheme = settings.theme || 'emerald';
   if (themeSelectEl) themeSelectEl.value = activeTheme;
   document.body.setAttribute('data-theme', activeTheme);
+
+  const themeBtns = document.querySelectorAll('.theme-chip-btn');
+  themeBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-theme-val') === activeTheme);
+  });
 
   if (apiKeyEl) {
     apiKeyEl.value = settings.hasGeminiApiKey ? '••••••••••••••••' : '';
