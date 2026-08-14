@@ -394,9 +394,8 @@ class DatabaseService {
       }
     }
 
-    // Hard guarantee: Plaintext key is NEVER stored in settings on disk
-    if (settings.geminiApiKey) {
-      delete settings.geminiApiKey;
+    if (settings.geminiApiKey && (!safeStorage || !safeStorage.isEncryptionAvailable())) {
+      this.inMemoryApiKey = settings.geminiApiKey;
     }
 
     if (!settings.ntfyTopic || !settings.ntfyTopic.trim()) {

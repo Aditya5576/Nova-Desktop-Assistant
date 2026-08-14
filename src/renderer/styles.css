@@ -980,6 +980,12 @@ code, pre, kbd, samp, .monospace {
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
 }
 
+select.text-input option {
+  background-color: #111827 !important;
+  color: #ffffff !important;
+  padding: 8px;
+}
+
 .text-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }
