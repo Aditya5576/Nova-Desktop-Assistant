@@ -97,6 +97,13 @@ class TaskSchedulerService {
         schTime = `${schTime}:00`;
       }
 
+      // Past-due guard: Do NOT schedule OS task if scheduled time is in the past (> 2 min ago)
+      const taskDateTime = new Date(`${task.dueDate}T${schTime}`);
+      if (!isNaN(taskDateTime.getTime()) && taskDateTime.getTime() < Date.now() - 120000) {
+        this.removeTask(taskId);
+        return;
+      }
+
       const formattedDateStr = `${day}/${month}/${year}`;
       const runnerScript = path.join(this.scriptsDir, 'runTask.ps1');
       const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${runnerScript}" -Id "${taskId}"`;
@@ -161,9 +168,14 @@ class TaskSchedulerService {
    */
   syncAllPendingTasks(tasks = []) {
     try {
-      const activePendingTasks = (tasks || []).filter(t =>
-        t && t.id && t.status === 'pending' && !t.notified && t.reminder !== false && t.dueDate
-      );
+      const now = Date.now();
+      const activePendingTasks = (tasks || []).filter(t => {
+        if (!t || !t.id || t.status !== 'pending' || t.notified || t.reminder === false || !t.dueDate) return false;
+        let schTime = t.dueTime || '09:00:00';
+        if (schTime.length === 5) schTime = `${schTime}:00`;
+        const taskDateTime = new Date(`${t.dueDate}T${schTime}`);
+        return !isNaN(taskDateTime.getTime()) && taskDateTime.getTime() >= now - 120000;
+      });
 
       const activeTaskNames = new Set(
         activePendingTasks.map(t => `MyAssist_Rem_${String(t.id).replace(/[^a-zA-Z0-9_]/g, '_')}`)

@@ -66,9 +66,39 @@ class DatabaseService {
         };
         fs.writeFileSync(this.dbPath, JSON.stringify(initialData, null, 2), 'utf-8');
       }
+      this.cleanStalePastTasks();
       this.scheduler.syncAllPendingTasks(this.getTasks());
     } catch (err) {
       console.error('Failed to initialize database file:', err);
+    }
+  }
+
+  cleanStalePastTasks() {
+    try {
+      const data = this.read();
+      if (!data || !Array.isArray(data.tasks)) return;
+
+      const now = new Date();
+      let modified = false;
+
+      data.tasks.forEach(task => {
+        if (task.status === 'pending' && !task.notified && task.dueDate && task.dueTime) {
+          let schTime = task.dueTime;
+          if (schTime.length === 5) schTime = `${schTime}:00`;
+          const taskDate = new Date(`${task.dueDate}T${schTime}`);
+          if (!isNaN(taskDate.getTime()) && taskDate.getTime() < now.getTime() - 120000) {
+            task.notified = true;
+            modified = true;
+          }
+        }
+      });
+
+      if (modified) {
+        this.write(data);
+        console.log('[Nova] Cleaned up past-due tasks to prevent notification storms.');
+      }
+    } catch (e) {
+      console.error('[Nova] Error cleaning past tasks:', e);
     }
   }
 
