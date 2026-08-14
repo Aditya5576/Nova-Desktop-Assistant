@@ -367,6 +367,7 @@ function addChatBubble(text, sender) {
   bubble.appendChild(senderTitle);
 
   const content = document.createElement('div');
+  content.className = 'bubble-text';
   const safeText = escapeHtml(text);
   content.innerHTML = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   bubble.appendChild(content);
