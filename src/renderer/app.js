@@ -93,7 +93,14 @@ function updateNextUpCard(allTasks) {
   const titleEl = document.getElementById('next-up-title');
   const timeEl = document.getElementById('next-up-time');
   const catEl = document.getElementById('next-up-category');
+  const cardEl = document.getElementById('next-up-card');
   if (!titleEl || !timeEl || !catEl) return;
+
+  if (cardEl && !cardEl.dataset.boundClick) {
+    cardEl.dataset.boundClick = 'true';
+    cardEl.style.cursor = 'pointer';
+    cardEl.addEventListener('click', () => switchTab('plan-tab'));
+  }
 
   const now = new Date();
   const year = now.getFullYear();
