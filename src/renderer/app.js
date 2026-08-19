@@ -294,6 +294,52 @@ function updateStats() {
   if (pendingEl) pendingEl.textContent = pendingCount;
 }
 
+  const planInput = document.getElementById('plan-task-input');
+  const planAddBtn = document.getElementById('plan-add-btn');
+
+  const handlePlanSubmit = async () => {
+    if (!planInput) return;
+    const inputStr = planInput.value.trim();
+    if (!inputStr) return;
+
+    let parsed = await window.myassist.parseInput(inputStr);
+    if (!parsed) {
+      const now = new Date();
+      const defaultFuture = new Date(now.getTime() + 3600000);
+      const hours = String(defaultFuture.getHours()).padStart(2, '0');
+      const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
+      parsed = {
+        title: inputStr,
+        type: 'scheduled',
+        status: 'pending',
+        category: 'General',
+        priority: 'medium',
+        recurring: 'none',
+        dueDate: now.toISOString().split('T')[0],
+        dueTime: `${hours}:${mins}:00`,
+        reminder: true,
+        notified: false
+      };
+    }
+
+    const newTask = await window.myassist.addTask(parsed);
+    planInput.value = '';
+    showToast(`Task Added: "${newTask.title}" 🎉`, 'success');
+    playChimeSound();
+    await loadTasks();
+  };
+
+  if (planAddBtn) planAddBtn.addEventListener('click', handlePlanSubmit);
+  if (planInput) {
+    planInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePlanSubmit();
+      }
+    });
+  }
+}
+
 async function handleUserSubmit() {
   try {
     const taskInput = document.getElementById('task-input');
@@ -303,7 +349,26 @@ async function handleUserSubmit() {
     addChatBubble(inputStr, 'user');
     taskInput.value = '';
 
-    const parsed = await window.myassist.parseInput(inputStr);
+    let parsed = await window.myassist.parseInput(inputStr);
+
+    if (!parsed && /\b(task|remind|schedule|todo|buy|call|meet|done|finished|workout|pay|bill)\b/i.test(inputStr)) {
+      const now = new Date();
+      const defaultFuture = new Date(now.getTime() + 3600000);
+      const hours = String(defaultFuture.getHours()).padStart(2, '0');
+      const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
+      parsed = {
+        title: inputStr.replace(/^(add task|create task|remind me to|can you|please)\s+/gi, '').trim() || inputStr,
+        type: 'scheduled',
+        status: 'pending',
+        category: 'General',
+        priority: 'medium',
+        recurring: 'none',
+        dueDate: now.toISOString().split('T')[0],
+        dueTime: `${hours}:${mins}:00`,
+        reminder: true,
+        notified: false
+      };
+    }
 
     if (parsed) {
       const newTask = await window.myassist.addTask(parsed);

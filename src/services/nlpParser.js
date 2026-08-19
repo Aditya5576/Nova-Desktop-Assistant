@@ -25,20 +25,18 @@ function parseTaskInput(inputStr) {
   let lower = text.toLowerCase();
 
   // 0. Detect Conversational Questions vs Tasks
-  const isQuestionOrChat = lower.startsWith('how ') || lower.startsWith('what ') || 
-                           lower.startsWith('why ') || lower.startsWith('who ') || 
-                           lower.startsWith('where ') || lower.startsWith('can ') || 
-                           lower.startsWith('could ') || lower.startsWith('tell me') || 
-                           lower.startsWith('hi') || lower.startsWith('hello') || 
-                           lower.startsWith('hey') || lower.endsWith('?');
+  const isStrictQuestion = lower.startsWith('what is') || lower.startsWith('what are') || 
+                           lower.startsWith('why is') || lower.startsWith('why did') || 
+                           lower.startsWith('who is') || lower.startsWith('where is') || 
+                           lower.startsWith('how to') || lower.startsWith('how do') || 
+                           lower.startsWith('how can') || lower.startsWith('explain') || 
+                           lower.startsWith('tell me about') ||
+                           (lower.endsWith('?') && !/\b(remind|schedule|add|task|done|completed|finished)\b/i.test(lower));
 
-  const hasExplicitTaskCommand = /\b(remind|schedule|todo|add task|create task)\b/i.test(lower) ||
-                                 /\b(done:|completed:|finished:)\b/i.test(lower) ||
-                                 /\bin\s+\d+\s*(sec|min|hr|day|hour)/i.test(lower) ||
-                                 /\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/i.test(lower) ||
-                                 /\b(tomorrow|next week)\b/i.test(lower);
+  const hasTaskIntent = /\b(remind|schedule|todo|task|add|create|buy|call|meet|meeting|done|completed|finished|workout|pay|bill|fix|code|email|report|send|clean|doctor|medicine)\b/i.test(lower) ||
+                        /\b(sec|secs|min|mins|hr|hrs|hour|hours|day|days|tomorrow|today|morning|afternoon|evening|night|pm|am)\b/i.test(lower);
 
-  if (isQuestionOrChat && !hasExplicitTaskCommand) {
+  if (isStrictQuestion && !hasTaskIntent) {
     return null; // Route to Gemini AI Conversational Assistant
   }
 
@@ -104,8 +102,13 @@ function parseTaskInput(inputStr) {
     }
   }
 
-  // 5. Detect & Clean Reminder Phrases
+  // 5. Detect & Clean Conversational & Reminder Filler Phrases
   const reminderPhrases = [
+    'hey please add a task to ', 'hey please add task ', 'hey please remind me to ',
+    'can you please add a task to ', 'can you add a task to ', 'can you please remind me to ',
+    'can you remind me to ', 'can you schedule ', 'could you add a task to ', 'could you remind me to ',
+    'please add a task to ', 'please add task ', 'please schedule ', 'please remind me to ',
+    'hey nova add task ', 'hey add task ', 'add task to ', 'add task ', 'create task to ', 'create task ',
     'remind me to ', 'remind me ', 'remember to ', 'remember ', 
     'need to ', 'have to ', 'schedule ', 'don\'t forget to '
   ];
