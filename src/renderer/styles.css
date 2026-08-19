@@ -438,39 +438,48 @@ code, pre, kbd, samp, .monospace {
 
 .panel-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel-header > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .panel-header h2 {
   font-family: var(--font-heading);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.3px;
+  margin: 0 0 2px 0;
 }
 
 .subtitle {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--text-muted);
-  margin-top: 2px;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .btn-danger {
   background: rgba(244, 63, 94, 0.15);
   border: 1px solid rgba(244, 63, 94, 0.35);
   color: var(--accent-rose);
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: var(--radius-md);
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .btn-danger:hover {
@@ -1016,13 +1025,16 @@ code, pre, kbd, samp, .monospace {
   background: rgba(11, 16, 29, 0.95);
   border: var(--glass-border);
   color: #fff;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   outline: none;
   transition: all 0.2s ease;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .text-input:focus {
