@@ -26,8 +26,8 @@
   --border-light: rgba(255, 255, 255, 0.08);
   --border-glow: rgba(16, 185, 129, 0.30);
 
-  --font-heading: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
-  --font-body: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-heading: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
   
   --radius-sm: 8px;
@@ -582,32 +582,29 @@ code, pre, kbd, samp, .monospace {
   color: var(--text-muted);
 }
 
-/* Command Box (Fixed Heights & No Overlaps) */
+/* Command Box (Compact Command Center) */
 .command-box {
   background: var(--bg-card);
   border: var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(20px);
   flex-shrink: 0;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .quick-tags {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
   width: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.quick-tags::-webkit-scrollbar {
-  display: none;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .tag-label {
@@ -621,19 +618,19 @@ code, pre, kbd, samp, .monospace {
   background: rgba(255, 255, 255, 0.06);
   border: var(--glass-border);
   color: var(--text-muted);
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .tag-chip:hover {
-  background: rgba(99, 102, 241, 0.22);
+  background: rgba(16, 185, 129, 0.22);
   color: #fff;
-  border-color: rgba(99, 102, 241, 0.45);
+  border-color: rgba(16, 185, 129, 0.45);
 }
 
 .ai-summary-chip {
@@ -645,27 +642,52 @@ code, pre, kbd, samp, .monospace {
 
 .input-wrapper {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 8px;
   width: 100%;
-  position: relative;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 #task-input {
   flex: 1;
   min-width: 0;
-  min-height: 42px;
-  max-height: 80px;
+  width: 100%;
+  max-width: 100%;
+  height: 40px;
   background: rgba(11, 16, 29, 0.95);
   border: var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  padding: 0 14px;
   color: #fff;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  line-height: 1.35;
+  font-size: 0.84rem;
   outline: none;
-  resize: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+#task-input:focus {
+  border-color: var(--primary-glow);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.send-btn {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  background: var(--primary-gradient);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
   transition: all 0.2s ease;
 }
 
@@ -1125,20 +1147,232 @@ select.text-input option {
     grid-template-columns: 1fr;
   }
   .stats-pills {
-    display: none;
+    display: none !important;
   }
   .hotkey-kbd {
-    display: none;
+    display: none !important;
   }
   .sidebar {
-    width: 54px;
-    padding: 10px 4px;
+    display: none !important;
   }
-  .nav-text, .badge, .nav-footer .nav-text {
-    display: none;
+}
+
+/* ==========================================================================
+   MILESTONE 1: COMPACT-FIRST ASSISTANT UI COMPONENTS
+   ========================================================================== */
+
+/* Orb Avatar Pulse Animation */
+.avatar-orb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981, 0 0 24px rgba(16, 185, 129, 0.4);
+  animation: orbPulse 2.8s infinite ease-in-out;
+}
+
+@keyframes orbPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+    box-shadow: 0 0 10px #10b981, 0 0 20px rgba(16, 185, 129, 0.4);
   }
-  .nav-item {
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+    box-shadow: 0 0 16px #34d399, 0 0 32px rgba(52, 211, 153, 0.6);
+  }
+}
+
+/* Dynamic Assistant Greeting Card */
+.assistant-greeting {
+  background: rgba(16, 22, 34, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.greeting-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 3px;
+  background: linear-gradient(135deg, #ffffff 0%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.greeting-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Next Up Task Card */
+.next-up-card {
+  background: rgba(16, 22, 34, 0.75);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.next-up-card:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
+}
+
+.next-up-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.next-up-badge {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.next-up-time {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-mint);
+  font-weight: 600;
+}
+
+.next-up-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.next-up-bullet {
+  color: #10b981;
+  font-size: 0.85rem;
+}
+
+.next-up-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+}
+
+.next-up-category {
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* AI Thinking Indicator Bubble */
+.chat-bubble.assistant.thinking {
+  border-left-color: var(--accent-purple);
+  opacity: 0.9;
+}
+
+.thinking-dots span {
+  display: inline-block;
+  font-weight: 700;
+  animation: thinkingPulse 1.4s infinite ease-in-out both;
+}
+
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes thinkingPulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Compact Bottom Navigation Bar (< 768px) */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none !important;
+  }
+
+  .bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 56px;
+    background: var(--bg-sidebar);
+    border-top: var(--glass-border);
+    backdrop-filter: blur(20px);
+    z-index: 100;
+    padding: 2px 8px;
+    box-sizing: border-box;
+  }
+
+  .bottom-nav-item {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    padding: 10px 0;
+    gap: 2px;
+    padding: 4px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-body);
+    position: relative;
+    flex: 1;
+  }
+
+  .bottom-nav-item .nav-icon {
+    font-size: 1.1rem;
+  }
+
+  .bottom-nav-item .nav-text {
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent-mint);
+    background: rgba(16, 185, 129, 0.15);
+  }
+
+  .app-container {
+    padding-bottom: 56px;
   }
 }

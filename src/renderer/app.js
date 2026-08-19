@@ -6,11 +6,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initTimeWidget();
   initEventListeners();
+  renderAssistantGreeting();
   await loadSettings();
   await loadTasks();
 
   const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
-  if (feed && feed.children.length === 0) {
+  if (feed && feed.children.length <= 1) {
     addChatBubble("Hello Aditya! 🤖 I'm Nova, your personal task assistant. Tell me what tasks you need to schedule or what you've finished today, or ask me anything!", 'assistant');
   }
 
@@ -35,25 +36,125 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-function initTabs() {
-  const navItems = document.querySelectorAll('.nav-item');
+function renderAssistantGreeting() {
+  const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
+  if (!feed) return;
+  if (feed.querySelector('.assistant-greeting')) return;
+
+  const curHour = new Date().getHours();
+  let greetingTime = 'Good morning';
+  if (curHour >= 12 && curHour < 17) greetingTime = 'Good afternoon';
+  else if (curHour >= 17) greetingTime = 'Good evening';
+
+  const greetingCard = document.createElement('div');
+  greetingCard.className = 'assistant-greeting';
+  greetingCard.innerHTML = `
+    <div class="greeting-title">${greetingTime}, Aditya</div>
+    <div class="greeting-subtitle">What can I help you with today?</div>
+  `;
+  feed.insertBefore(greetingCard, feed.firstChild);
+}
+
+function setNovaStatus(statusText) {
+  const statusEl = document.getElementById('nova-status-text');
+  if (statusEl) statusEl.textContent = statusText;
+}
+
+function showThinkingIndicator() {
+  const feed = document.getElementById('chat-feed') || document.getElementById('chat-history');
+  if (!feed || document.getElementById('ai-thinking-bubble')) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble assistant thinking';
+  bubble.id = 'ai-thinking-bubble';
+
+  const senderTitle = document.createElement('div');
+  senderTitle.className = 'bubble-sender';
+  senderTitle.textContent = '🤖 NOVA ASSISTANT';
+  bubble.appendChild(senderTitle);
+
+  const content = document.createElement('div');
+  content.className = 'bubble-text';
+  content.innerHTML = `<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span> Nova is thinking...`;
+  bubble.appendChild(content);
+
+  feed.appendChild(bubble);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function removeThinkingIndicator() {
+  const bubble = document.getElementById('ai-thinking-bubble');
+  if (bubble && bubble.parentNode) {
+    bubble.parentNode.removeChild(bubble);
+  }
+}
+
+function updateNextUpCard(allTasks) {
+  const titleEl = document.getElementById('next-up-title');
+  const timeEl = document.getElementById('next-up-time');
+  const catEl = document.getElementById('next-up-category');
+  if (!titleEl || !timeEl || !catEl) return;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  const pending = (allTasks || []).filter(t => t.status === 'pending' && t.reminder !== false && t.notified !== true);
+
+  pending.sort((a, b) => {
+    const dtA = `${a.dueDate || todayStr}T${a.dueTime || '09:00:00'}`;
+    const dtB = `${b.dueDate || todayStr}T${b.dueTime || '09:00:00'}`;
+    return dtA.localeCompare(dtB);
+  });
+
+  if (pending.length > 0) {
+    const next = pending[0];
+    titleEl.textContent = next.title || 'Untitled Task';
+    timeEl.textContent = next.dueTime ? formatTime12Hour(next.dueTime) : next.dueDate;
+    catEl.textContent = next.category || 'General';
+  } else {
+    titleEl.textContent = 'No upcoming tasks scheduled';
+    timeEl.textContent = '--:--';
+    catEl.textContent = 'General';
+  }
+}
+
+function switchTab(tabName) {
+  if (!tabName) return;
+  const cleanTab = tabName.replace(/^panel-/, '');
+
+  const navItems = document.querySelectorAll('.nav-item, .bottom-nav-item');
   const panels = document.querySelectorAll('.tab-panel');
 
-  navItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const tabName = item.getAttribute('data-tab');
-      navItems.forEach(n => n.classList.remove('active'));
-      panels.forEach(p => p.classList.remove('active'));
+  navItems.forEach(n => {
+    const itemTab = (n.getAttribute('data-tab') || '').replace(/^panel-/, '');
+    if (itemTab === cleanTab) {
+      n.classList.add('active');
+    } else {
+      n.classList.remove('active');
+    }
+  });
 
-      item.classList.add('active');
-      const targetPanel = document.getElementById(`panel-${tabName}`) || document.getElementById(tabName);
-      if (targetPanel) {
-        targetPanel.classList.add('active');
-      } else {
-        const defaultPanel = document.getElementById('panel-assistant-tab');
-        if (defaultPanel) defaultPanel.classList.add('active');
-      }
-    });
+  panels.forEach(p => {
+    const panelId = (p.id || '').replace(/^panel-/, '');
+    if (panelId === cleanTab) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
+}
+
+function initTabs() {
+  document.addEventListener('click', (e) => {
+    const navBtn = e.target.closest('.nav-item, .bottom-nav-item');
+    if (navBtn) {
+      e.preventDefault();
+      const tabName = navBtn.getAttribute('data-tab');
+      if (tabName) switchTab(tabName);
+    }
   });
 }
 
@@ -280,6 +381,7 @@ async function loadTasks() {
   tasks = await window.myassist.getTasks();
   renderTodayTomorrow();
   renderHistoryLog();
+  updateNextUpCard(tasks);
   updateStats();
 }
 
@@ -386,13 +488,21 @@ async function handleUserSubmit() {
       playChimeSound();
     } else {
       try {
+        setNovaStatus('Thinking...');
+        showThinkingIndicator();
         const response = await window.myassist.geminiChat(inputStr);
+        removeThinkingIndicator();
+        setNovaStatus('Ready');
         addChatBubble(response, 'assistant');
       } catch (err) {
+        removeThinkingIndicator();
+        setNovaStatus('Ready');
         addChatBubble("I'm here for you, Aditya! Ask me anything or tell me a task to schedule.", 'assistant');
       }
     }
   } catch (e) {
+    removeThinkingIndicator();
+    setNovaStatus('Ready');
     console.error('Error handling submit:', e);
     showToast('Task submitted', 'info');
     loadTasks();

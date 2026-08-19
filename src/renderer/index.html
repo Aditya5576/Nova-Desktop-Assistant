@@ -23,10 +23,10 @@
           <div class="avatar-ring"></div>
         </div>
         <div class="brand-text">
-          <h1>Nova</h1>
-          <div class="status-badge">
-            <span class="pulse-dot"></span>
-            Active & Listening
+          <h1>NOVA</h1>
+          <div class="status-badge" id="status-badge-container">
+            <span class="pulse-dot" id="nova-status-dot"></span>
+            <span id="nova-status-text">Ready</span>
             <span class="hotkey-kbd">Alt+Space</span>
           </div>
         </div>
@@ -35,7 +35,7 @@
       <div class="header-right">
         <div class="stats-pills">
           <div class="stat-pill highlight">
-            <span>✨ Done Today</span>
+            <span>✨ Done</span>
             <strong id="stat-done-today">0</strong>
           </div>
           <div class="stat-pill">
@@ -93,21 +93,33 @@
               <!-- Dynamically populated assistant chat messages -->
             </div>
 
+            <!-- Next Up Task Card -->
+            <div class="next-up-card" id="next-up-card">
+              <div class="next-up-header">
+                <span class="next-up-badge">NEXT UP</span>
+                <span class="next-up-time" id="next-up-time">--:--</span>
+              </div>
+              <div class="next-up-body">
+                <span class="next-up-bullet">○</span>
+                <span class="next-up-title" id="next-up-title">No upcoming tasks scheduled</span>
+                <span class="next-up-category" id="next-up-category">General</span>
+              </div>
+            </div>
+
             <!-- Smart Input Bar -->
             <div class="command-box">
               <div class="quick-tags">
-                <span class="tag-label">Task Type / Actions:</span>
-                <button class="tag-chip" data-fill="Remind me at ">⏰ Schedule Task</button>
-                <button class="tag-chip" data-fill="Done: ">✅ Log Done</button>
-                <button class="tag-chip" data-fill="Remind me every day at ">🔁 Daily Task</button>
-                <button class="tag-chip ai-summary-chip" id="ai-summary-btn">✨ AI Daily Summary</button>
+                <button class="tag-chip" data-fill="Remind me at ">⏰ Schedule</button>
+                <button class="tag-chip" data-fill="Done: ">✅ Done</button>
+                <button class="tag-chip" data-fill="Remind me every day at ">🔁 Daily</button>
+                <button class="tag-chip ai-summary-chip" id="ai-summary-btn">✨ AI Summary</button>
                 <button class="tag-chip" data-tag="#Work">#Work</button>
                 <button class="tag-chip" data-tag="#Personal">#Personal</button>
                 <button class="tag-chip" data-tag="🔴 Urgent">🔴 Urgent</button>
               </div>
 
               <div class="input-wrapper">
-                <input type="text" id="task-input" placeholder="Ask Nova anything or log a task..." autocomplete="off">
+                <input type="text" id="task-input" placeholder="✦ Ask Nova anything or log a task..." autocomplete="off">
                 <button class="send-btn" id="send-btn">
                   <span>Send</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -128,6 +140,8 @@
             <button class="btn-danger" id="clear-all-btn" title="Clear All Pending & Scheduled Tasks">
               🗑️ Clear All Tasks
             </button>
+          </div>
+
           <!-- Direct Quick Add Bar for Plan View -->
           <div class="plan-quick-add" style="margin-bottom: 12px; display: flex; gap: 8px;">
             <input type="text" id="plan-task-input" class="text-input" placeholder="➕ Quick Add Task (e.g. Call client at 4pm #Work)..." autocomplete="off" style="flex: 1;">
@@ -268,6 +282,26 @@
   </div>
 
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- Compact Bottom Navigation Bar (Visible on narrow viewports < 768px) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bottom-nav-item active" data-tab="assistant-tab">
+      <span class="nav-icon">💬</span>
+      <span class="nav-text">Assistant</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="plan-tab">
+      <span class="nav-icon">📅</span>
+      <span class="nav-text">Tasks</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="history-tab">
+      <span class="nav-icon">📜</span>
+      <span class="nav-text">Log</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="settings-tab">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-text">Settings</span>
+    </button>
+  </nav>
 
   <script src="app.js?v=2.0.0"></script>
 </body>
