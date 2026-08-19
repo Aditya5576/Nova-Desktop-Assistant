@@ -409,15 +409,26 @@ code, pre, kbd, samp, .monospace {
 
 .tab-panel {
   display: none;
-  height: 100%;
-  padding: 16px 18px;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px;
+  box-sizing: border-box;
   animation: fadeIn 0.25s ease;
 }
 
 .tab-panel.active {
   display: flex;
   flex-direction: column;
+}
+
+#panel-assistant-tab {
+  overflow: hidden;
+}
+
+#panel-plan-tab,
+#panel-history-tab,
+#panel-settings-tab {
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {

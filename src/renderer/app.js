@@ -251,6 +251,51 @@ function initEventListeners() {
     });
   }
 
+  const planInput = document.getElementById('plan-task-input');
+  const planAddBtn = document.getElementById('plan-add-btn');
+
+  const handlePlanSubmit = async () => {
+    if (!planInput) return;
+    const inputStr = planInput.value.trim();
+    if (!inputStr) return;
+
+    let parsed = await window.myassist.parseInput(inputStr);
+    if (!parsed) {
+      const now = new Date();
+      const defaultFuture = new Date(now.getTime() + 3600000);
+      const hours = String(defaultFuture.getHours()).padStart(2, '0');
+      const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
+      parsed = {
+        title: inputStr,
+        type: 'scheduled',
+        status: 'pending',
+        category: 'General',
+        priority: 'medium',
+        recurring: 'none',
+        dueDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+        dueTime: `${hours}:${mins}:00`,
+        reminder: true,
+        notified: false
+      };
+    }
+
+    const newTask = await window.myassist.addTask(parsed);
+    planInput.value = '';
+    showToast(`Task Added: "${newTask.title}" 🎉`, 'success');
+    playChimeSound();
+    await loadTasks();
+  };
+
+  if (planAddBtn) planAddBtn.addEventListener('click', handlePlanSubmit);
+  if (planInput) {
+    planInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePlanSubmit();
+      }
+    });
+  }
+
   const toggleKeyBtn = document.getElementById('toggle-key-visibility');
   if (toggleKeyBtn) {
     toggleKeyBtn.addEventListener('click', () => {
@@ -403,55 +448,10 @@ function updateStats() {
   if (pendingEl) pendingEl.textContent = pendingCount;
 }
 
-  const planInput = document.getElementById('plan-task-input');
-  const planAddBtn = document.getElementById('plan-add-btn');
-
-  const handlePlanSubmit = async () => {
-    if (!planInput) return;
-    const inputStr = planInput.value.trim();
-    if (!inputStr) return;
-
-    let parsed = await window.myassist.parseInput(inputStr);
-    if (!parsed) {
-      const now = new Date();
-      const defaultFuture = new Date(now.getTime() + 3600000);
-      const hours = String(defaultFuture.getHours()).padStart(2, '0');
-      const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
-      parsed = {
-        title: inputStr,
-        type: 'scheduled',
-        status: 'pending',
-        category: 'General',
-        priority: 'medium',
-        recurring: 'none',
-        dueDate: now.toISOString().split('T')[0],
-        dueTime: `${hours}:${mins}:00`,
-        reminder: true,
-        notified: false
-      };
-    }
-
-    const newTask = await window.myassist.addTask(parsed);
-    planInput.value = '';
-    showToast(`Task Added: "${newTask.title}" 🎉`, 'success');
-    playChimeSound();
-    await loadTasks();
-  };
-
-  if (planAddBtn) planAddBtn.addEventListener('click', handlePlanSubmit);
-  if (planInput) {
-    planInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handlePlanSubmit();
-      }
-    });
-  }
-}
-
 async function handleUserSubmit() {
   try {
     const taskInput = document.getElementById('task-input');
+    if (!taskInput) return;
     const inputStr = taskInput.value.trim();
     if (!inputStr) return;
 
@@ -460,11 +460,13 @@ async function handleUserSubmit() {
 
     let parsed = await window.myassist.parseInput(inputStr);
 
-    if (!parsed && /\b(task|remind|schedule|todo|buy|call|meet|done|finished|workout|pay|bill)\b/i.test(inputStr)) {
+    if (!parsed) {
       const now = new Date();
       const defaultFuture = new Date(now.getTime() + 3600000);
       const hours = String(defaultFuture.getHours()).padStart(2, '0');
       const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
       parsed = {
         title: inputStr.replace(/^(add task|create task|remind me to|can you|please)\s+/gi, '').trim() || inputStr,
         type: 'scheduled',
@@ -472,41 +474,26 @@ async function handleUserSubmit() {
         category: 'General',
         priority: 'medium',
         recurring: 'none',
-        dueDate: now.toISOString().split('T')[0],
+        dueDate: todayStr,
         dueTime: `${hours}:${mins}:00`,
         reminder: true,
         notified: false
       };
     }
 
-    if (parsed) {
-      const newTask = await window.myassist.addTask(parsed);
-      await loadTasks();
+    const newTask = await window.myassist.addTask(parsed);
+    await loadTasks();
 
-      const displayTime = newTask.dueTime ? formatTime12Hour(newTask.dueTime) : newTask.dueDate;
-      const priorityTag = (newTask.priority || 'medium').toUpperCase();
+    const displayTime = newTask.dueTime ? formatTime12Hour(newTask.dueTime) : newTask.dueDate;
+    const priorityTag = (newTask.priority || 'medium').toUpperCase();
 
-      let replyMsg = `Scheduled: "${newTask.title}" | 🕒 ${displayTime} | ⚡ ${priorityTag}`;
-      if (newTask.type === 'completed') {
-        replyMsg = `✅ Completed: "${newTask.title}" | ⚡ ${priorityTag}`;
-      }
-
-      addChatBubble(replyMsg, 'assistant');
-      playChimeSound();
-    } else {
-      try {
-        setNovaStatus('Thinking...');
-        showThinkingIndicator();
-        const response = await window.myassist.geminiChat(inputStr);
-        removeThinkingIndicator();
-        setNovaStatus('Ready');
-        addChatBubble(response, 'assistant');
-      } catch (err) {
-        removeThinkingIndicator();
-        setNovaStatus('Ready');
-        addChatBubble("I'm here for you, Aditya! Ask me anything or tell me a task to schedule.", 'assistant');
-      }
+    let replyMsg = `Scheduled: "${newTask.title}" | 🕒 ${displayTime} | ⚡ ${priorityTag}`;
+    if (newTask.type === 'completed') {
+      replyMsg = `✅ Completed: "${newTask.title}" | ⚡ ${priorityTag}`;
     }
+
+    addChatBubble(replyMsg, 'assistant');
+    playChimeSound();
   } catch (e) {
     removeThinkingIndicator();
     setNovaStatus('Ready');
