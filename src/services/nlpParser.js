@@ -30,7 +30,7 @@ function parseTaskInput(inputStr) {
                            lower.startsWith('who is') || lower.startsWith('where is') || 
                            lower.startsWith('how to') || lower.startsWith('how do') || 
                            lower.startsWith('how can') || lower.startsWith('explain') || 
-                           lower.startsWith('tell me about') ||
+                           lower.startsWith('tell me') ||
                            (lower.endsWith('?') && !/\b(remind|schedule|add|task|done|completed|finished)\b/i.test(lower));
 
   const hasTaskIntent = /\b(remind|schedule|todo|task|add|create|buy|call|meet|meeting|done|completed|finished|workout|pay|bill|fix|code|email|report|send|clean|doctor|medicine)\b/i.test(lower) ||
@@ -131,9 +131,13 @@ function parseTaskInput(inputStr) {
   };
 
   for (const [word, num] of Object.entries(numberWords)) {
-    const wordRegex = new RegExp(`\\bin\\s+${word}\\b`, 'gi');
-    lower = lower.replace(wordRegex, `in ${num}`);
+    const wordRegex = new RegExp(`\\b(in|after)?\\s*${word}\\b`, 'gi');
+    lower = lower.replace(wordRegex, (m, p1) => p1 ? `${p1} ${num}` : num);
+    title = title.replace(wordRegex, (m, p1) => p1 ? `${p1} ${num}` : num);
   }
+
+  // Also clean raw spelled-out number phrases directly from title
+  title = title.replace(/(?:in|after)?\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty)\s*(secs|sec|seconds|second|mins|min|minutes|minute|hrs|hr|hours|hour)\b/gi, '').trim();
 
   // PARSE DECIMAL & INTEGER RELATIVE TIMING: "3 sec", "in 10 secs", "in 1.1 mins", "after 2 min", "in three seconds"
   const relSecMatch = lower.match(/(?:in|after)?\s*(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second)\b/i) || lower.match(/\b(\d+(?:\.\d+)?)\s*(secs|sec|seconds|second)\b/i);
@@ -217,6 +221,11 @@ function parseTaskInput(inputStr) {
       }
 
       targetDate.setHours(hours, minutes, 0, 0);
+
+      // Past time roll-over: If explicit time (e.g. 10am) is earlier today than current time, roll targetDate to TOMORROW!
+      if (targetDate.getTime() < now.getTime() - 60000 && !lower.includes('today')) {
+        targetDate.setDate(targetDate.getDate() + 1);
+      }
 
       const formattedH = String(hours).padStart(2, '0');
       const formattedM = String(minutes).padStart(2, '0');

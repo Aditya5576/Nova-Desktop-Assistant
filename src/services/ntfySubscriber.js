@@ -1,5 +1,6 @@
 const https = require('https');
 const EventEmitter = require('events');
+const { StringDecoder } = require('string_decoder');
 const logger = require('./logger');
 
 /**
@@ -14,38 +15,51 @@ class NtfySubscriber extends EventEmitter {
     this.req = null;
     this.processedIds = new Set();
     this.isListening = false;
+    this.isConnecting = false;
     this.reconnectTimeout = null;
   }
 
   setTopic(topic) {
-    if (topic && topic.trim() && topic.trim() !== this.topic) {
-      this.topic = topic.trim();
+    const trimmed = (topic || '').trim();
+    if (!trimmed || trimmed === 'none') {
+      this.topic = 'none';
+      this.stop();
+      return;
+    }
+    if (trimmed !== this.topic) {
+      this.topic = trimmed;
       this.stop();
       this.start();
     }
   }
 
   start() {
-    if (this.isListening || !this.topic || this.topic === 'none') return;
+    if (this.isListening || this.isConnecting || !this.topic || this.topic === 'none') return;
+
+    this.isConnecting = true;
 
     try {
       const url = `https://ntfy.sh/${encodeURIComponent(this.topic)}/json?since=10m`;
       logger.info(`[iPhone Sync] Connecting real-time task listener to ${url}...`);
 
       this.req = https.get(url, (res) => {
+        this.isConnecting = false;
+
         if (res.statusCode !== 200) {
           logger.warn(`[iPhone Sync] ntfy stream returned status ${res.statusCode}. Retrying in 10s...`);
-          this.scheduleReconnect();
+          if (typeof res.resume === 'function') res.resume();
+          this.scheduleReconnect(10000);
           return;
         }
 
         this.isListening = true;
         logger.info(`[iPhone Sync] 🟢 Connected! Listening for incoming tasks from iPhone on topic "${this.topic}"`);
 
+        const decoder = new StringDecoder('utf-8');
         let buffer = '';
 
         res.on('data', (chunk) => {
-          buffer += chunk.toString('utf-8');
+          buffer += decoder.write(chunk);
           const lines = buffer.split('\n');
           buffer = lines.pop(); // Keep incomplete line in buffer
 
@@ -103,12 +117,14 @@ class NtfySubscriber extends EventEmitter {
       });
 
       this.req.on('error', (err) => {
+        this.isConnecting = false;
         this.isListening = false;
         logger.error(`[iPhone Sync] Request connection error: ${err.message}`);
         this.scheduleReconnect(10000);
       });
 
     } catch (err) {
+      this.isConnecting = false;
       this.isListening = false;
       logger.error(`[iPhone Sync] Failed to start ntfy subscriber: ${err.message}`);
       this.scheduleReconnect(10000);
@@ -125,6 +141,7 @@ class NtfySubscriber extends EventEmitter {
 
   stop() {
     this.isListening = false;
+    this.isConnecting = false;
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;

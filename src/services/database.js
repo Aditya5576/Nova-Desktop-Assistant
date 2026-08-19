@@ -116,9 +116,16 @@ class DatabaseService {
 
   write(data) {
     try {
+      const dbDir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
       const tempPath = `${this.dbPath}.tmp`;
       fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-      fs.renameSync(tempPath, this.dbPath);
+      try {
+        fs.renameSync(tempPath, this.dbPath);
+      } catch (renameErr) {
+        fs.copyFileSync(tempPath, this.dbPath);
+        try { fs.unlinkSync(tempPath); } catch (e) {}
+      }
       return true;
     } catch (err) {
       console.error('Error writing database file:', err);

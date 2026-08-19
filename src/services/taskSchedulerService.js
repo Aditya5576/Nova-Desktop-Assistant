@@ -66,6 +66,28 @@ class TaskSchedulerService {
     }
   }
 
+  detectWindowsShortDateFormat() {
+    try {
+      const { execSync } = require('child_process');
+      const pattern = execSync('powershell.exe -NoProfile -Command "(Get-ItemProperty \'HKCU:\\Control Panel\\International\').sShortDate"', { encoding: 'utf-8', timeout: 3000 }).trim().toLowerCase();
+      if (pattern.startsWith('m')) return 'MM/DD/YYYY';
+      if (pattern.startsWith('y')) return 'YYYY-MM-DD';
+    } catch (e) {}
+    return 'DD/MM/YYYY';
+  }
+
+  formatDateForOs(year, month, day) {
+    if (!this.osDateFormat) {
+      this.osDateFormat = this.detectWindowsShortDateFormat();
+    }
+    if (this.osDateFormat === 'MM/DD/YYYY') {
+      return `${month}/${day}/${year}`;
+    } else if (this.osDateFormat === 'YYYY-MM-DD') {
+      return `${year}-${month}-${day}`;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
   /**
    * Schedules a Windows OS Task for a pending task.
    * Strictly enforces:
@@ -104,7 +126,7 @@ class TaskSchedulerService {
         return;
       }
 
-      const formattedDateStr = `${day}/${month}/${year}`;
+      const formattedDateStr = this.formatDateForOs(year, month, day);
       const runnerScript = path.join(this.scriptsDir, 'runTask.ps1');
       const taskAction = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${runnerScript}" -Id "${taskId}"`;
 
