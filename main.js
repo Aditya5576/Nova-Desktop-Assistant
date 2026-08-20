@@ -190,52 +190,58 @@ function createWindow() {
     }
   });
 
-  // Initialize Real-Time iPhone Task Subscriber Engine
+  // Initialize Real-Time iPhone Task Subscriber Engine (Disabled unless user sets a private custom topic)
   const currentSettings = db.getSettings();
-  const activeTopic = (currentSettings && currentSettings.ntfyTopic) ? currentSettings.ntfyTopic : 'nova-my-tasks';
-  
-  if (!ntfySubscriber) {
-    ntfySubscriber = new NtfySubscriber(activeTopic);
-    ntfySubscriber.on('task-received', async ({ text }) => {
-      try {
-        if (!text || text === 'triggered' || text === 'OK' || text.length < 2) return;
+  const activeTopic = (currentSettings && currentSettings.ntfyTopic && currentSettings.ntfyTopic.trim() && currentSettings.ntfyTopic.trim() !== 'nova-my-tasks') ? currentSettings.ntfyTopic.trim() : '';
 
-        let parsed = parseTaskInput(text);
-        if (!parsed) {
-          const now = new Date();
-          const defaultFuture = new Date(now.getTime() + 3600000);
-          parsed = {
-            title: text,
-            type: 'scheduled',
-            status: 'pending',
-            category: 'General',
-            priority: 'medium',
-            recurring: 'none',
-            dueDate: getLocalDateString(defaultFuture),
-            dueTime: getLocalTimeStringSec(defaultFuture),
-            reminder: true,
-            notified: false
-          };
-        }
-
-        const newTask = taskService.addTask(parsed);
-        logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
-        
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('task-added-from-iphone', newTask);
-        }
-
-        if (notificationService) {
-          notificationService.playAudioChime();
-          notificationService.sendWindowsToast('📱 Task Received from iPhone', `"${newTask.title}"`);
-        }
-      } catch (err) {
-        logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
-      }
-    });
-    ntfySubscriber.start();
+  if (!activeTopic || activeTopic === 'none') {
+    if (ntfySubscriber) {
+      ntfySubscriber.stop();
+    }
   } else {
-    ntfySubscriber.setTopic(activeTopic);
+    if (!ntfySubscriber) {
+      ntfySubscriber = new NtfySubscriber(activeTopic);
+      ntfySubscriber.on('task-received', async ({ text }) => {
+        try {
+          if (!text || text === 'triggered' || text === 'OK' || text.length < 2) return;
+
+          let parsed = parseTaskInput(text);
+          if (!parsed) {
+            const now = new Date();
+            const defaultFuture = new Date(now.getTime() + 3600000);
+            parsed = {
+              title: text,
+              type: 'scheduled',
+              status: 'pending',
+              category: 'General',
+              priority: 'medium',
+              recurring: 'none',
+              dueDate: getLocalDateString(defaultFuture),
+              dueTime: getLocalTimeStringSec(defaultFuture),
+              reminder: true,
+              notified: false
+            };
+          }
+
+          const newTask = taskService.addTask(parsed);
+          logger.info(`[iPhone Sync] Successfully added task "${newTask.title}" from iPhone 15`);
+
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('task-added-from-iphone', newTask);
+          }
+
+          if (notificationService) {
+            notificationService.playAudioChime();
+            notificationService.sendWindowsToast('📱 Task Received from iPhone', `"${newTask.title}"`);
+          }
+        } catch (err) {
+          logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
+        }
+      });
+      ntfySubscriber.start();
+    } else {
+      ntfySubscriber.setTopic(activeTopic);
+    }
   }
 }
 
