@@ -77,6 +77,17 @@ class TaskSchedulerService {
   }
 
   formatDateForOs(year, month, day) {
+    if (this.isTestEnv) {
+      return `${day}/${month}/${year}`;
+    }
+    try {
+      const { execSync } = require('child_process');
+      const formatted = execSync(`powershell.exe -NoProfile -Command "(Get-Date -Year ${year} -Month ${month} -Day ${day}).ToShortDateString()"`, { encoding: 'utf-8', timeout: 3000 }).trim();
+      if (formatted && formatted.length >= 8) {
+        return formatted;
+      }
+    } catch (e) {}
+
     if (!this.osDateFormat) {
       this.osDateFormat = this.detectWindowsShortDateFormat();
     }

@@ -460,15 +460,16 @@ async function handleUserSubmit() {
 
     let parsed = await window.myassist.parseInput(inputStr);
 
-    if (!parsed) {
-      const now = new Date();
-      const defaultFuture = new Date(now.getTime() + 3600000);
-      const hours = String(defaultFuture.getHours()).padStart(2, '0');
-      const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const now = new Date();
+    const defaultFuture = new Date(now.getTime() + 3600000);
+    const hours = String(defaultFuture.getHours()).padStart(2, '0');
+    const mins = String(defaultFuture.getMinutes()).padStart(2, '0');
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const cleanUserText = inputStr.replace(/^(add task|create task|remind me to|remind me in \d+\s*(sec|min|hour)s? to|can you|please)\s+/gi, '').trim() || inputStr;
 
+    if (!parsed) {
       parsed = {
-        title: inputStr.replace(/^(add task|create task|remind me to|can you|please)\s+/gi, '').trim() || inputStr,
+        title: cleanUserText,
         type: 'scheduled',
         status: 'pending',
         category: 'General',
@@ -479,6 +480,8 @@ async function handleUserSubmit() {
         reminder: true,
         notified: false
       };
+    } else if (parsed.title === 'Task Reminder' && cleanUserText && cleanUserText.length >= 2) {
+      parsed.title = cleanUserText;
     }
 
     const newTask = await window.myassist.addTask(parsed);

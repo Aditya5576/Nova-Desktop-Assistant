@@ -1,0 +1,11 @@
+{
+  "tasks": [],
+  "settings": {
+    "assistantName": "Nova",
+    "theme": "dark",
+    "soundEnabled": true,
+    "notificationsEnabled": true,
+    "geminiApiKey": "",
+    "ntfyTopic": ""
+  }
+}
