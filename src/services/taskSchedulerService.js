@@ -67,36 +67,35 @@ class TaskSchedulerService {
   }
 
   detectWindowsShortDateFormat() {
+    if (this.osDateFormat) return this.osDateFormat;
     try {
-      const { execSync } = require('child_process');
-      const pattern = execSync('powershell.exe -NoProfile -Command "(Get-ItemProperty \'HKCU:\\Control Panel\\International\').sShortDate"', { encoding: 'utf-8', timeout: 3000 }).trim().toLowerCase();
-      if (pattern.startsWith('m')) return 'MM/DD/YYYY';
-      if (pattern.startsWith('y')) return 'YYYY-MM-DD';
-    } catch (e) {}
-    return 'DD/MM/YYYY';
+      const d = new Date(2026, 11, 31);
+      const formatted = new Intl.DateTimeFormat().format(d);
+      if (formatted.startsWith('12')) {
+        this.osDateFormat = 'MM/DD/YYYY';
+      } else if (formatted.startsWith('2026')) {
+        this.osDateFormat = 'YYYY-MM-DD';
+      } else {
+        this.osDateFormat = 'DD/MM/YYYY';
+      }
+    } catch (e) {
+      this.osDateFormat = 'DD/MM/YYYY';
+    }
+    return this.osDateFormat;
   }
 
   formatDateForOs(year, month, day) {
-    if (this.isTestEnv) {
-      return `${day}/${month}/${year}`;
-    }
-    try {
-      const { execSync } = require('child_process');
-      const formatted = execSync(`powershell.exe -NoProfile -Command "(Get-Date -Year ${year} -Month ${month} -Day ${day}).ToShortDateString()"`, { encoding: 'utf-8', timeout: 3000 }).trim();
-      if (formatted && formatted.length >= 8) {
-        return formatted;
-      }
-    } catch (e) {}
+    const m = String(month).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    const y = String(year);
 
-    if (!this.osDateFormat) {
-      this.osDateFormat = this.detectWindowsShortDateFormat();
+    const fmt = this.detectWindowsShortDateFormat();
+    if (fmt === 'MM/DD/YYYY') {
+      return `${m}/${d}/${y}`;
+    } else if (fmt === 'YYYY-MM-DD') {
+      return `${y}-${m}-${d}`;
     }
-    if (this.osDateFormat === 'MM/DD/YYYY') {
-      return `${month}/${day}/${year}`;
-    } else if (this.osDateFormat === 'YYYY-MM-DD') {
-      return `${year}-${month}-${day}`;
-    }
-    return `${day}/${month}/${year}`;
+    return `${d}/${m}/${y}`;
   }
 
   /**
