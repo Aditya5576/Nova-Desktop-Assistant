@@ -201,9 +201,24 @@ function createWindow() {
   } else {
     if (!ntfySubscriber) {
       ntfySubscriber = new NtfySubscriber(activeTopic);
+      let lastInboundTaskTime = 0;
+
       ntfySubscriber.on('task-received', async ({ text }) => {
         try {
           if (!text || text === 'triggered' || text === 'OK' || text.length < 2) return;
+
+          // Loop Circuit Breaker
+          if (text.includes('Test alert') || text.includes('"""') || text.includes('""') || text.includes('Nova Desktop Assistant')) {
+            return;
+          }
+
+          // Rate Limiter: Max 1 inbound task per 5 seconds
+          const nowTime = Date.now();
+          if (nowTime - lastInboundTaskTime < 5000) {
+            logger.warn('[iPhone Sync] Inbound rate limit triggered. Discarding rapid message.');
+            return;
+          }
+          lastInboundTaskTime = nowTime;
 
           let parsed = parseTaskInput(text);
           if (!parsed) {
