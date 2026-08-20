@@ -9,9 +9,9 @@ try {
     $appDir = Split-Path -Parent $scriptDir
 
     $possibleDbPaths = @(
+        (Join-Path $appDir "myassist_tasks.json"),
         (Join-Path $env:APPDATA "Nova\myassist_tasks.json"),
-        (Join-Path $env:APPDATA "MyAssist\myassist_tasks.json"),
-        (Join-Path $appDir "myassist_tasks.json")
+        (Join-Path $env:APPDATA "MyAssist\myassist_tasks.json")
     )
 
     $dbPath = ""
