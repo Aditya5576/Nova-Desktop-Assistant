@@ -14,10 +14,39 @@ class TaskService {
   addTask(taskData) {
     if (!taskData || typeof taskData !== 'object') return null;
 
+    let title = (taskData.title || '').trim();
+    // Strip surrounding quotes cleanly
+    title = title.replace(/^"+|"+$/g, '').trim();
+
+    // Junk String Sanitize Guard
+    if (!title || 
+        title.length < 2 || 
+        title.includes('Test alert') || 
+        title.includes('Nova Desktop Assistant') || 
+        title.includes('"""') || 
+        title.includes('""')) {
+      console.warn('[TaskService] Rejected junk/system task:', title);
+      return null;
+    }
+
     const data = this.db.read();
+    const existingTasks = data.tasks || [];
+
+    // Deduplication Guard: Ignore duplicate pending tasks with identical title
+    const normalizedTitle = title.toLowerCase();
+    const duplicate = existingTasks.find(t => 
+      t.status === 'pending' && 
+      String(t.title || '').trim().toLowerCase() === normalizedTitle
+    );
+
+    if (duplicate) {
+      console.log('[TaskService] Duplicate task ignored:', title);
+      return duplicate;
+    }
+
     const newTask = {
       id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-      title: taskData.title || 'Untitled Task',
+      title: title,
       type: taskData.type || 'scheduled',
       status: taskData.status || (taskData.type === 'completed' ? 'done' : 'pending'),
       category: taskData.category || 'General',
