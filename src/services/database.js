@@ -420,19 +420,26 @@ class DatabaseService {
     if (settings.geminiApiKeyEncrypted && safeStorage && safeStorage.isEncryptionAvailable()) {
       try {
         const buffer = Buffer.from(settings.geminiApiKeyEncrypted, 'base64');
-        return safeStorage.decryptString(buffer);
+        const decrypted = safeStorage.decryptString(buffer);
+        if (decrypted) return decrypted;
       } catch (err) {
         console.error('Failed to decrypt Gemini API key:', err);
       }
     }
 
-    // Return session in-memory key if safeStorage is unavailable
+    if (settings.geminiApiKeyFallback) {
+      try {
+        const decoded = Buffer.from(settings.geminiApiKeyFallback, 'base64').toString('utf-8');
+        if (decoded) return decoded;
+      } catch (e) {}
+    }
+
     return this.inMemoryApiKey || '';
   }
 
   hasGeminiApiKey() {
     const key = this.getDecryptedApiKey();
-    return Boolean(key && key.trim().length > 10);
+    return Boolean(key && key.trim().length > 10 && !key.includes('••••'));
   }
 
   updateSettings(newSettings) {
@@ -447,21 +454,29 @@ class DatabaseService {
       const rawKey = (newSettings.geminiApiKey || '').trim();
       delete updatedSettings.geminiApiKey; // NEVER persist plaintext geminiApiKey to disk
 
-      if (!rawKey) {
-        delete updatedSettings.geminiApiKeyEncrypted;
-        this.inMemoryApiKey = '';
-      } else if (safeStorage && safeStorage.isEncryptionAvailable()) {
-        try {
-          const buffer = safeStorage.encryptString(rawKey);
-          updatedSettings.geminiApiKeyEncrypted = buffer.toString('base64');
-          this.inMemoryApiKey = rawKey;
-        } catch (err) {
-          console.error('Encryption error:', err);
+      // Mask guard: ignore updates that pass the bullet mask string '••••'
+      if (!rawKey.includes('••••')) {
+        if (!rawKey) {
+          delete updatedSettings.geminiApiKeyEncrypted;
+          delete updatedSettings.geminiApiKeyFallback;
+          this.inMemoryApiKey = '';
+        } else if (safeStorage && safeStorage.isEncryptionAvailable()) {
+          try {
+            const buffer = safeStorage.encryptString(rawKey);
+            updatedSettings.geminiApiKeyEncrypted = buffer.toString('base64');
+            delete updatedSettings.geminiApiKeyFallback;
+            this.inMemoryApiKey = rawKey;
+          } catch (err) {
+            console.error('Encryption error:', err);
+            const encoded = Buffer.from(rawKey).toString('base64');
+            updatedSettings.geminiApiKeyFallback = encoded;
+            this.inMemoryApiKey = rawKey;
+          }
+        } else {
+          const encoded = Buffer.from(rawKey).toString('base64');
+          updatedSettings.geminiApiKeyFallback = encoded;
           this.inMemoryApiKey = rawKey;
         }
-      } else {
-        console.warn('Secure API key storage unavailable on this platform. Key retained in memory for current session only.');
-        this.inMemoryApiKey = rawKey;
       }
     }
 

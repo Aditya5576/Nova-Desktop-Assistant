@@ -349,19 +349,28 @@ function initEventListeners() {
 
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', async () => {
-      const apiKey = document.getElementById('setting-gemini-key').value.trim();
+      const apiKeyEl = document.getElementById('setting-gemini-key');
+      const apiKeyVal = apiKeyEl ? apiKeyEl.value.trim() : '';
       const iosTopic = document.getElementById('setting-ios-topic').value.trim();
       const soundEnabled = document.getElementById('setting-sound').checked;
       const notifEnabled = document.getElementById('setting-notif').checked;
       const selectedTheme = themeSelectEl ? themeSelectEl.value : 'emerald';
 
-      const updated = await window.myassist.updateSettings({
-        geminiApiKey: apiKey,
+      const updatePayload = {
         ntfyTopic: iosTopic,
         soundEnabled,
         notificationsEnabled: notifEnabled,
         theme: selectedTheme
-      });
+      };
+
+      // Only pass geminiApiKey if the user typed a new key (not masked dots)
+      if (apiKeyVal && !apiKeyVal.includes('••••')) {
+        updatePayload.geminiApiKey = apiKeyVal;
+      } else if (apiKeyVal === '') {
+        updatePayload.geminiApiKey = '';
+      }
+
+      const updated = await window.myassist.updateSettings(updatePayload);
 
       settings = updated || {};
       showToast('Settings & UI Theme saved! 🎨', 'success');
