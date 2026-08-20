@@ -18,7 +18,7 @@ describe('🔔 Nova Notification Engine & Loop Suppression QA Audit', () => {
       https.request = originalHttpsRequest;
     });
 
-    it('should include nova_outbound,bell,alarm_clock tags in iOS push alert headers', (done) => {
+    it('should include nova_outbound,bell,alarm_clock tags in iOS push alert headers', () => {
       const notifService = new NotificationService();
       // Temporarily override test env check for unit test assertion
       notifService.isTestEnv = false;
@@ -29,21 +29,20 @@ describe('🔔 Nova Notification Engine & Loop Suppression QA Audit', () => {
         capturedOptions = options;
         const fakeReq = new EventEmitter();
         fakeReq.write = () => {};
-        fakeReq.end = () => {
-          assert.ok(capturedOptions, 'https.request should be called');
-          assert.strictEqual(capturedOptions.hostname, 'ntfy.sh');
-          assert.strictEqual(capturedOptions.method, 'POST');
-          assert.strictEqual(capturedOptions.path, '/test-custom-topic');
-          assert.ok(capturedOptions.headers, 'Headers should be defined');
-          assert.strictEqual(capturedOptions.headers['Tags'], 'nova_outbound,bell,alarm_clock');
-          assert.strictEqual(capturedOptions.headers['Title'], 'QA Test Title');
-          assert.strictEqual(capturedOptions.headers['Priority'], 'high');
-          done();
-        };
+        fakeReq.end = () => {};
         return fakeReq;
       };
 
       notifService.sendIosPushNotification('QA Test Title', 'QA Test Body', 'test-custom-topic');
+
+      assert.ok(capturedOptions, 'https.request should be called');
+      assert.strictEqual(capturedOptions.hostname, 'ntfy.sh');
+      assert.strictEqual(capturedOptions.method, 'POST');
+      assert.strictEqual(capturedOptions.path, '/test-custom-topic');
+      assert.ok(capturedOptions.headers, 'Headers should be defined');
+      assert.strictEqual(capturedOptions.headers['Tags'], 'nova_outbound,bell,alarm_clock');
+      assert.strictEqual(capturedOptions.headers['Title'], 'QA Test Title');
+      assert.strictEqual(capturedOptions.headers['Priority'], 'high');
     });
   });
 

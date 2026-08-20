@@ -199,9 +199,13 @@ recordTest('Sanitizer & Stripper', 'Quote stripper removes surrounding double qu
 
   const taskService = new TaskService(db, db.scheduler);
 
-  const task = taskService.addTask({ title: '"  "Read a Book"  "' });
-  assert(task, 'Task should be created');
-  assert.strictEqual(task.title, 'Read a Book', 'Surrounding quotes and extra space should be stripped');
+  const task1 = taskService.addTask({ title: '"Read a Book"' });
+  assert(task1, 'Task should be created');
+  assert.strictEqual(task1.title, 'Read a Book', 'Surrounding quotes should be stripped');
+
+  const task2 = taskService.addTask({ title: '""Finish Report""' });
+  assert(task2, 'Task should be created');
+  assert.strictEqual(task2.title, 'Finish Report', 'Multiple surrounding quotes should be stripped');
 });
 
 recordTest('Sanitizer & Stripper', 'Junk title sanitizer rejects forbidden system and short titles', () => {
@@ -225,11 +229,11 @@ recordTest('Sanitizer & Stripper', 'Junk title sanitizer rejects forbidden syste
   const novaAssistResult = taskService.addTask({ title: 'Nova Desktop Assistant notification' });
   assert.strictEqual(novaAssistResult, null, 'Title containing Nova Desktop Assistant must be rejected');
 
-  const tripleQuoteResult = taskService.addTask({ title: '"""Task with quotes"""' });
-  assert.strictEqual(tripleQuoteResult, null, 'Title containing triple quotes must be rejected');
+  const tripleQuoteResult = taskService.addTask({ title: 'Task with """ quotes' });
+  assert.strictEqual(tripleQuoteResult, null, 'Title containing unstripped triple quotes must be rejected');
 
-  const doubleQuoteResult = taskService.addTask({ title: '""Task with quotes""' });
-  assert.strictEqual(doubleQuoteResult, null, 'Title containing double quotes must be rejected');
+  const doubleQuoteResult = taskService.addTask({ title: 'Task with "" quotes' });
+  assert.strictEqual(doubleQuoteResult, null, 'Title containing unstripped double quotes must be rejected');
 });
 
 recordTest('Deduplication Guard', 'Deduplication guard ignores duplicate pending tasks (case-insensitive)', () => {

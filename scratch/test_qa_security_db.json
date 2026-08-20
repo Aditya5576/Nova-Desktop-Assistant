@@ -1,0 +1,56 @@
+{
+  "tasks": [
+    {
+      "id": "task_1787228725882_z2fd",
+      "title": "Stale Lock Task",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-20T12:25:25.882Z",
+      "completedAt": null,
+      "dueDate": "2026-08-20",
+      "dueTime": "09:00:00",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "task_1787228725873_anz5",
+      "title": "Active Lock Task",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-20T12:25:25.873Z",
+      "completedAt": null,
+      "dueDate": "2026-08-20",
+      "dueTime": "09:00:00",
+      "reminder": true,
+      "notified": false,
+      "snoozedUntil": null,
+      "notes": ""
+    },
+    {
+      "id": "task_1787228725864_xdci",
+      "title": "Lock Test Task",
+      "type": "scheduled",
+      "status": "pending",
+      "category": "General",
+      "priority": "medium",
+      "recurring": "none",
+      "createdAt": "2026-08-20T12:25:25.864Z",
+      "completedAt": null,
+      "dueDate": "2026-08-20",
+      "dueTime": "09:00:00",
+      "reminder": true,
+      "notified": true,
+      "snoozedUntil": null,
+      "notes": ""
+    }
+  ],
+  "settings": {}
+}

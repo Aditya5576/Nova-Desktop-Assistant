@@ -17,7 +17,8 @@ const testFiles = [
   './tests/taskSchedulerDuplication.test.js',
   './tests/ntfySubscriber.test.js',
   './tests/taskSchedulerQA.test.js',
-  './tests/qa_notification_engine_audit.js'
+  './tests/qa_notification_engine_audit.js',
+  './tests/qa_security_and_paths_audit.test.js'
 ];
 
 let totalTests = 0;
