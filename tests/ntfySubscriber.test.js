@@ -31,7 +31,7 @@ describe('📱 iPhone 15 NtfySubscriber & Sync Engine QA Audit', () => {
     };
 
     subscriber.start();
-    assert.strictEqual(requestedUrl, 'https://ntfy.sh/test-topic-qa/json?since=10m');
+    assert.strictEqual(requestedUrl, 'https://ntfy.sh/test-topic-qa/json?since=1m');
     assert.strictEqual(subscriber.isListening, true);
     subscriber.stop();
     assert.strictEqual(subscriber.isListening, false);
@@ -248,13 +248,13 @@ describe('📱 iPhone 15 NtfySubscriber & Sync Engine QA Audit', () => {
 
     subscriber.start();
     assert.strictEqual(connectionUrls.length, 1);
-    assert.strictEqual(connectionUrls[0], 'https://ntfy.sh/topic-A/json?since=10m');
+    assert.strictEqual(connectionUrls[0], 'https://ntfy.sh/topic-A/json?since=1m');
 
     // Change topic to topic-B
     subscriber.setTopic('topic-B');
     assert.strictEqual(subscriber.topic, 'topic-B');
     assert.strictEqual(connectionUrls.length, 2);
-    assert.strictEqual(connectionUrls[1], 'https://ntfy.sh/topic-B/json?since=10m');
+    assert.strictEqual(connectionUrls[1], 'https://ntfy.sh/topic-B/json?since=1m');
 
     // Change topic to 'none' -> should stop
     subscriber.setTopic('none');

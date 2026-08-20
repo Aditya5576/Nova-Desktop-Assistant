@@ -347,6 +347,17 @@ function initEventListeners() {
     });
   }
 
+  const testIphoneBtn = document.getElementById('test-iphone-btn');
+  if (testIphoneBtn) {
+    testIphoneBtn.addEventListener('click', async () => {
+      const topicVal = document.getElementById('setting-ios-topic').value.trim() || 'nova-my-tasks';
+      if (window.myassist && typeof window.myassist.testIphoneNotif === 'function') {
+        const topicUsed = await window.myassist.testIphoneNotif(topicVal);
+        showToast(`📱 Test alert sent to topic "${topicUsed}"! Check your phone.`, 'info');
+      }
+    });
+  }
+
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', async () => {
       const apiKeyEl = document.getElementById('setting-gemini-key');

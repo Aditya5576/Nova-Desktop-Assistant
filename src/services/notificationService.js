@@ -61,7 +61,7 @@ class NotificationService {
         headers: {
           'Title': safeTitle,
           'Priority': 'high',
-          'Tags': 'bell,alarm_clock',
+          'Tags': 'nova_outbound,bell,alarm_clock',
           'Content-Type': 'text/plain; charset=utf-8',
           'Content-Length': Buffer.byteLength(postData)
         }

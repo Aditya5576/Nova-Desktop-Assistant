@@ -225,7 +225,10 @@ function createWindow() {
           mainWindow.webContents.send('task-added-from-iphone', newTask);
         }
 
-        notificationService.dispatchNotification('📱 Task Received from iPhone', `"${newTask.title}"`, db ? db.getSettings() : {});
+        if (notificationService) {
+          notificationService.playAudioChime();
+          notificationService.sendWindowsToast('📱 Task Received from iPhone', `"${newTask.title}"`);
+        }
       } catch (err) {
         logger.error(`[iPhone Sync] Error processing task from iPhone: ${err.message}`);
       }
@@ -264,6 +267,14 @@ ipcMain.handle('open-external', (event, url) => {
     return true;
   }
   return false;
+});
+
+ipcMain.handle('test-iphone-notif', (event, topic) => {
+  const activeTopic = (topic && typeof topic === 'string' && topic.trim()) ? topic.trim() : 'nova-my-tasks';
+  if (notificationService) {
+    notificationService.sendIosPushNotification('📱 Nova Test Alert', 'Your iPhone notification setup is 100% working! 🎉', activeTopic);
+  }
+  return activeTopic;
 });
 
 ipcMain.handle('get-tasks', () => taskService.getTasks());
