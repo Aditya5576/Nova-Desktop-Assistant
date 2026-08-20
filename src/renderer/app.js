@@ -369,6 +369,20 @@ function initEventListeners() {
     });
   }
 
+  // Intercept all link clicks (<a href="...">) to open in user's default system browser
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (link) {
+      const url = link.getAttribute('href');
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        e.preventDefault();
+        if (window.myassist && typeof window.myassist.openExternal === 'function') {
+          window.myassist.openExternal(url);
+        }
+      }
+    }
+  });
+
   // Quick Action Chips
   document.querySelectorAll('.tag-chip[data-fill]').forEach(chip => {
     chip.addEventListener('click', () => {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -150,6 +150,22 @@ function createWindow() {
   mainWindow.webContents.session.clearCache();
   mainWindow.loadFile(path.join(__dirname, 'src/renderer/index.html'));
 
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL()) {
+      event.preventDefault();
+      if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
+        shell.openExternal(url);
+      }
+    }
+  });
+
   mainWindow.show();
   mainWindow.focus();
 
@@ -242,6 +258,14 @@ function toggleWindowVisibility() {
 }
 
 // IPC Handlers
+ipcMain.handle('open-external', (event, url) => {
+  if (typeof url === 'string' && (url.startsWith('http:') || url.startsWith('https:'))) {
+    shell.openExternal(url);
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle('get-tasks', () => taskService.getTasks());
 
 ipcMain.handle('add-task', (event, taskData) => {

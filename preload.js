@@ -36,7 +36,8 @@ const apiBridge = {
   },
   onTaskAddedFromIphone: (callback) => {
     ipcRenderer.on('task-added-from-iphone', (event, task) => callback(task));
-  }
+  },
+  openExternal: (url) => ipcRenderer.invoke('open-external', url)
 };
 
 contextBridge.exposeInMainWorld('myassist', apiBridge);
